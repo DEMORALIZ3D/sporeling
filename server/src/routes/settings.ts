@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { getSettings, updateSettings, PROFILE_PRESETS, decayAt, outdoorMinutesToday } from '../state/settings.js';
 import { stateManager } from '../state/state-manager.js';
-import { publicProviders, updateProviders, checkLlmHealth, classify } from '../ai/providers.js';
+import { publicProviders, updateProviders, resetProviders, checkLlmHealth, classify } from '../ai/providers.js';
 
 export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
   const snapshot = () => ({
@@ -25,6 +25,18 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.put('/providers', async (req, reply) => {
     updateProviders((req.body as any) || {});
     return reply.send(publicProviders());
+  });
+
+  fastify.post('/providers/reset', async (_req, reply) => {
+    resetProviders();
+    return reply.send(publicProviders());
+  });
+
+  // Rhythm back to defaults too (one "standard setup" button in the UI calls both)
+  fastify.post('/reset', async (_req, reply) => {
+    stateManager.getCalculatedState();
+    updateSettings({ profile: 'balanced', workStart: 9, workEnd: 17, workDays: [1, 2, 3, 4, 5], sleepStart: 23, wakeHour: 7, customMultiplier: 1, dailyGoalMinutes: 45 });
+    return reply.send(snapshot());
   });
 
   fastify.post('/providers/test', async (_req, reply) => {

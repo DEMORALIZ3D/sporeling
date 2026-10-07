@@ -21,6 +21,7 @@ const hourLabel = (h: number) => `${String(h).padStart(2, '0')}:00`;
 
 export const SettingsSheet: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const [snap, setSnap] = useState<SettingsSnapshot | null>(null);
+  const [tab, setTab] = useState<'rhythm' | 'setup'>('rhythm');
 
   useEffect(() => {
     if (isOpen) fetchSettings().then(setSnap).catch(() => setSnap(null));
@@ -49,12 +50,22 @@ export const SettingsSheet: React.FC<{ isOpen: boolean; onClose: () => void }> =
         className="w-full sm:max-w-md max-h-[90vh] overflow-y-auto bg-biome-card border border-emerald-900/60 rounded-t-3xl sm:rounded-3xl p-5 pb-8 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-emerald-200">Your rhythm</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-emerald-200">Settings</h2>
           <button onClick={onClose} className="p-1 text-slate-400 hover:text-white" aria-label="Close"><X className="w-4 h-4" /></button>
         </div>
+        <div className="flex gap-1 p-1 mb-4 rounded-xl bg-slate-950/60 border border-slate-800">
+          {(['rhythm', 'setup'] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition ${tab === t ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}>
+              {t === 'rhythm' ? 'Your rhythm' : 'AI setup'}
+            </button>
+          ))}
+        </div>
 
-        {!s || !snap ? (
+        {tab === 'setup' ? (
+          <EnginesPanel onResetAll={() => fetchSettings().then(setSnap)} />
+        ) : !s || !snap ? (
           <p className="text-xs text-slate-400">Loading…</p>
         ) : (
           <>
@@ -108,8 +119,6 @@ export const SettingsSheet: React.FC<{ isOpen: boolean; onClose: () => void }> =
               </div>
               <div className="text-[11px] text-slate-400">{PHASE_COPY[snap.now.phase]} ({snap.now.mult}×)</div>
             </div>
-
-            <EnginesPanel />
           </>
         )}
       </div>

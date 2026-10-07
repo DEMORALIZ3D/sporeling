@@ -85,3 +85,10 @@ _TODO: date, place, what worked, what Gemma got wrong, battery, latency._
 - System-1 classifier: any Laya-schema /v1/predict (noul/choice/score). Routes intent in ~100ms before spending an LLM call; falls back to the LLM answering the same schema (tested: Gemma 627ms-1.2s, 'weather' @0.95).
 - UI shows 'All on-device' vs 'Some data leaves this device'. Keys stored locally, masked in API.
 - Post angle: open = swappable. Same app runs on Gemma locally or anything you point it at.
+
+### Engines update (Oct 7)
+- Classifier adapters: Laya native, HF zero-shot, /v1/rerank (Cohere/Jina), /v1/embeddings (cosine) -> all map to the Laya question schema; failures fall back to Gemma JSON mode.
+- Presets with a 'Standard setup' button = fully local Gemma, no extra service.
+- Key safety: keys masked in API, kept on save, wiped if endpoint host changes.
+- Bug found while screenshotting: Fastify rejects empty JSON POST bodies (FST_ERR_CTP_EMPTY_JSON_BODY) -> UI showed 'Brain offline'. Fixed by sending '{}'.
+- Screenshot: docs/screenshots/mobile-ai-setup.png (Laya 294ms).
