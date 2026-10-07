@@ -1,7 +1,7 @@
 import { VISION_INGESTION_SYSTEM_PROMPT, buildCompanionSystemPrompt } from './prompts.js';
 import type { PetState, AffinityType } from '../state/types.js';
 
-const LLAMA_SERVER_URL = process.env.LLAMA_SERVER_URL || 'http://127.0.0.1:8080';
+import { llmFetch, checkLlmHealth } from './providers.js';
 
 export type CompanionAction =
   | 'idle'
@@ -37,12 +37,7 @@ export interface CompanionReply {
 }
 
 export async function checkLlamaHealth(): Promise<boolean> {
-  try {
-    const res = await fetch(`${LLAMA_SERVER_URL}/health`, { signal: AbortSignal.timeout(2000) });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  return checkLlmHealth();
 }
 
 export async function analyzeNatureImage(base64Image: string, mimeType: string = 'image/jpeg', context?: string): Promise<VisionEvaluation> {
@@ -51,7 +46,6 @@ export async function analyzeNatureImage(base64Image: string, mimeType: string =
     : `data:${mimeType};base64,${base64Image}`;
 
   const payload = {
-    model: 'gemma-4-E2B-it-Q4_K_M',
     messages: [
       {
         role: 'system',
@@ -81,12 +75,10 @@ export async function analyzeNatureImage(base64Image: string, mimeType: string =
 
   let lastError = '';
   for (let attempt = 0; attempt < 2; attempt++) try {
-    const res = await fetch(`${LLAMA_SERVER_URL}/v1/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await llmFetch({
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(120000)
-    });
+    }, 'vision');
 
     if (!res.ok) {
       const errText = await res.text();
@@ -164,7 +156,6 @@ Respond in JSON format with:
 }`;
 
   const payload = {
-    model: 'gemma-4-E2B-it-Q4_K_M',
     messages: [
       { role: 'system', content: systemPrompt },
       ...history.slice(-8),
@@ -177,7 +168,7 @@ Respond in JSON format with:
   };
 
   try {
-    const res = await fetch(`${LLAMA_SERVER_URL}/v1/chat/completions`, {
+    const res = await llmFetch({
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -210,7 +201,6 @@ Respond in JSON format with:
 /** Turns a computed sky report into a short spoken relay in the familiar's voice. */
 export async function narrateSky(skyReportJson: string, starsVisible: boolean, fallback: string): Promise<string> {
   const payload = {
-    model: 'gemma-4-E2B-it-Q4_K_M',
     messages: [
       {
         role: 'system',
@@ -223,7 +213,7 @@ Speak 3 to 4 short sentences aloud: name the constellation overhead, the brighte
     max_tokens: 220
   };
   try {
-    const res = await fetch(`${LLAMA_SERVER_URL}/v1/chat/completions`, {
+    const res = await llmFetch({
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload), signal: AbortSignal.timeout(60000)
     });
@@ -257,10 +247,9 @@ export async function routeIntent(userText: string, history: ChatTurn[] = []): P
 - duration_min: convert "an hour"=60, "half an hour"=30, "quick"=20, "long"=75.
 - If the user is answering a question about a walk, intent is plan_walk.`;
   try {
-    const res = await fetch(`${LLAMA_SERVER_URL}/v1/chat/completions`, {
+    const res = await llmFetch({
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gemma-4-E2B-it-Q4_K_M',
         messages: [{ role: 'system', content: sys }, ...history.slice(-4), { role: 'user', content: userText }],
         temperature: 0, max_tokens: 80,
         response_format: { type: 'json_object' },

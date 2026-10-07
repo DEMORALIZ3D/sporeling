@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Sun, Briefcase, Mountain, SlidersHorizontal } from 'lucide-react';
 import { fetchSettings, saveSettings, type ActivityProfile, type SettingsSnapshot } from '../lib/api';
+import { EnginesPanel } from './EnginesPanel';
 
 const ICONS: Record<ActivityProfile, React.ReactNode> = {
   outdoor: <Mountain className="w-4 h-4" />,
@@ -107,6 +108,8 @@ export const SettingsSheet: React.FC<{ isOpen: boolean; onClose: () => void }> =
               </div>
               <div className="text-[11px] text-slate-400">{PHASE_COPY[snap.now.phase]} ({snap.now.mult}×)</div>
             </div>
+
+            <EnginesPanel />
           </>
         )}
       </div>

@@ -7,6 +7,7 @@ import { db } from '../db/index.js';
 import { WALK_TYPES, type WalkType } from '../ai/geo.js';
 import { fetchLiveBiomeWeather } from '../ai/biodiversity.js';
 import { getSettings, updateSettings, decayAt, outdoorMinutesToday, PROFILE_PRESETS } from '../state/settings.js';
+import { classify, getProviders } from '../ai/providers.js';
 
 // ───────────────────────── conversation memory ─────────────────────────
 
@@ -126,6 +127,30 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
     else if (WEATHER_RE.test(lower)) { intent = 'weather'; location = extractPlace(text); }
     else if (/\b(alarm|timer|remind me to walk)\b/.test(lower)) intent = 'alarm';
     else if (/\b(mushroom|shroom|bird|tree|spore|fungi|nearby|nature map|scan)\b/.test(lower)) intent = 'scan_nature';
+
+    // System-1 pass: if a Laya-style classifier is configured, it decides the intent in ~100ms
+    // before we spend an LLM call. Location spans still come from regex / the LLM router.
+    if (!intent && getProviders().classifier.kind !== 'none') {
+      const c = await classify(text, {
+        intent: {
+          type: 'choice',
+          instructions: 'What does the user want from their nature companion?',
+          criteria: {
+            weather: 'weather, temperature, rain, sunny, forecast, conditions somewhere',
+            plan_walk: 'plan a walk, route, stroll, hike, somewhere to go outside',
+            scan_nature: 'nearby mushrooms, birds, trees, plants, wildlife sightings',
+            save_memory: 'remember this, note, save a reminder',
+            recall_memory: 'what did I say, recall a note, search memories',
+            chat: 'small talk, feelings, questions about the companion, anything else'
+          }
+        }
+      });
+      const a = c?.answers?.intent;
+      if (a?.choice && a.choice !== 'chat' && (a.confidence ?? 1) >= 0.5) {
+        intent = a.choice;
+        if (intent === 'weather') location = extractPlace(text);
+      }
+    }
 
     // Ambiguous → let Gemma route (also catches "is it sunny in kyoto" style phrasing the regex misses)
     let routed: Awaited<ReturnType<typeof routeIntent>> = null;

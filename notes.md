@@ -79,3 +79,9 @@ _TODO: date, place, what worked, what Gemma got wrong, battery, latency._
 - EmbeddingGemma 2 runtime check
 - README: setup script, model download, architecture diagram
 - DevRelay session (optional)
+
+## Pluggable engines (Oct 7)
+- Chat/vision: any OpenAI-compatible /v1 endpoint (llama.cpp default, Ollama, LM Studio, vLLM, cloud). Separate vision endpoint optional.
+- System-1 classifier: any Laya-schema /v1/predict (noul/choice/score). Routes intent in ~100ms before spending an LLM call; falls back to the LLM answering the same schema (tested: Gemma 627ms-1.2s, 'weather' @0.95).
+- UI shows 'All on-device' vs 'Some data leaves this device'. Keys stored locally, masked in API.
+- Post angle: open = swappable. Same app runs on Gemma locally or anything you point it at.
