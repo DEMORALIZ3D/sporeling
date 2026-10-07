@@ -13,7 +13,8 @@ import { DesktopSidebar } from './components/DesktopSidebar';
 import { fetchPetState } from './lib/api';
 import { notificationManager } from './lib/notifications';
 import type { PetState } from './lib/types';
-import { Camera, Footprints, BookOpen, Bell } from 'lucide-react';
+import { Camera, Footprints, BookOpen, Bell, Settings2 } from 'lucide-react';
+import { SettingsSheet } from './components/SettingsSheet';
 
 export function App() {
   const [petState, setPetState] = useState<PetState | null>(null);
@@ -22,6 +23,7 @@ export function App() {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isWalkModalOpen, setIsWalkModalOpen] = useState(false);
   const [isMemoriesOpen, setIsMemoriesOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isFeeding, setIsFeeding] = useState(false);
   const [alarmBanner, setAlarmBanner] = useState<string | null>(null);
@@ -202,7 +204,17 @@ export function App() {
           onSpeakingStateChange={setIsSpeaking}
           onStateUpdate={setPetState}
           onActionTrigger={setCurrentAction}
+          onStartWalk={() => setIsWalkModalOpen(true)}
         />
+
+        {/* Rhythm / activity profile settings */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          aria-label="Your rhythm settings"
+          className="absolute top-20 right-4 lg:right-6 z-20 p-2.5 rounded-full bg-slate-950/60 border border-white/10 text-emerald-200 backdrop-blur-md hover:bg-slate-900 active:scale-90 transition"
+        >
+          <Settings2 className="w-4 h-4" />
+        </button>
 
         {/* Mobile-Only Bottom Action Dock */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 p-3 pb-5 bg-gradient-to-t from-biome-dark via-biome-dark/95 to-transparent flex items-center justify-center gap-3">
@@ -270,6 +282,8 @@ export function App() {
         isOpen={isMemoriesOpen}
         onClose={() => setIsMemoriesOpen(false)}
       />
+
+      <SettingsSheet isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

@@ -188,7 +188,7 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
         replyText = toolResult.message;
         action = toolResult.success ? 'celebrating' : 'thinking';
         widget = { type: 'walk_route', data: toolResult.data };
-        quickReplies = toolResult.success ? ['Start walk', 'Something shorter', 'Try somewhere else'] : ['Try a park walk', 'Try a city walk'];
+        quickReplies = toolResult.success ? ['Something shorter', 'Try somewhere else'] : ['Try a park walk', 'Try a city walk'];
       }
     } else if (intent === 'alarm') {
       replyText = "Setting an outdoor nature reminder! Keep an eye on your background alarms.";

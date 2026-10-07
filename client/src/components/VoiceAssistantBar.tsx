@@ -6,24 +6,28 @@ import type { PetState, CreatureAction } from '../lib/types';
 import { WeatherForagingRadarWidget } from './Widgets/WeatherForagingRadarWidget';
 import { TouchGrassAlarmWidget } from './Widgets/TouchGrassAlarmWidget';
 import { BiomeRadarWidget } from './Widgets/BiomeRadarWidget';
+import { WalkRouteWidget, WalkOptionsWidget } from './Widgets/WalkRouteWidget';
 
 interface VoiceAssistantBarProps {
   petState: PetState | null;
   onSpeakingStateChange: (isSpeaking: boolean) => void;
   onStateUpdate: (state: PetState) => void;
   onActionTrigger: (action: CreatureAction) => void;
+  onStartWalk?: () => void;
 }
 
 export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
-  petState,
+  petState: _petState,
   onSpeakingStateChange,
   onStateUpdate,
-  onActionTrigger
+  onActionTrigger,
+  onStartWalk
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [inputText, setInputText] = useState('');
   const [replyText, setReplyText] = useState<string | null>(null);
   const [activeWidget, setActiveWidget] = useState<{ type: string; data?: any } | null>(null);
+  const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSendMessage = async (textToSend: string) => {
@@ -31,12 +35,14 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
 
     setIsProcessing(true);
     setInputText('');
+    setQuickReplies([]);
     onActionTrigger('thinking');
 
     try {
       const response = await sendCompanionVoiceText(textToSend);
       setReplyText(response.replyText);
       onStateUpdate(response.petState);
+      setQuickReplies(response.quickReplies ?? []);
 
       if (response.action) {
         onActionTrigger(response.action);
@@ -105,7 +111,7 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
           >
             <X className="w-3.5 h-3.5" />
           </button>
-          {activeWidget.type === 'weather_radar' && <WeatherForagingRadarWidget />}
+          {activeWidget.type === 'weather_radar' && <WeatherForagingRadarWidget data={activeWidget.data} />}
           {activeWidget.type === 'alarm' && <TouchGrassAlarmWidget />}
           {activeWidget.type === 'biome_radar' && (
             <BiomeRadarWidget
@@ -113,6 +119,27 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
               initialCategory={activeWidget.data?.category}
             />
           )}
+          {activeWidget.type === 'walk_options' && (
+            <WalkOptionsWidget data={activeWidget.data} onPick={(t) => handleSendMessage(t)} />
+          )}
+          {activeWidget.type === 'walk_route' && activeWidget.data && (
+            <WalkRouteWidget plan={activeWidget.data} onStart={onStartWalk} />
+          )}
+        </div>
+      )}
+
+      {/* Quick replies */}
+      {quickReplies.length > 0 && !isProcessing && (
+        <div className="w-full max-w-md flex flex-wrap justify-center gap-1.5 pointer-events-auto">
+          {quickReplies.map((q) => (
+            <button
+              key={q}
+              onClick={() => (q === 'Start walk' && onStartWalk ? onStartWalk() : handleSendMessage(q))}
+              className="px-3 py-1.5 rounded-full bg-slate-900/80 border border-emerald-800/70 text-emerald-200 text-xs font-semibold backdrop-blur-md hover:bg-emerald-900/60 active:scale-95 transition"
+            >
+              {q}
+            </button>
+          ))}
         </div>
       )}
 
