@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.env
+.env.*
+*.db
+*.db-wal
+*.db-shm
+*.gguf
+*.onnx
+*.pdf
+.DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "sporeling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sporeling: The Biome Familiar - Hacktoberfest 2026 Touch Grass with Local Gemma 4",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"green,cyan\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix server run build && npm --prefix client run build",
+    "test:vision": "npm --prefix server run test:vision"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": ["hacktoberfest", "gemma", "touch-grass", "threejs", "virtual-pet", "ai-companion"],
+  "author": "",
+  "license": "MIT"
+}
