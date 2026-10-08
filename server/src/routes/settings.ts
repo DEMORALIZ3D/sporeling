@@ -48,7 +48,6 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
 
   // Rhythm back to defaults too (one "standard setup" button in the UI calls both)
   fastify.post('/reset', async (_req, reply) => {
-    stateManager.getCalculatedState();
     updateSettings({
       profile: 'balanced',
       workStart: 9,
@@ -59,6 +58,7 @@ export const settingsRoutes: FastifyPluginAsync = async (fastify) => {
       customMultiplier: 1,
       dailyGoalMinutes: 45,
     });
+    stateManager.resetPetToHealthy();
     return reply.send(snapshot());
   });
 

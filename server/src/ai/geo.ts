@@ -382,6 +382,17 @@ export async function planWalk(
       );
   }
 
+  for (const wp of waypoints) {
+    if (wp.name.startsWith('Unnamed')) {
+      const area = await reverseGeocode(wp.lat, wp.lng);
+      if (area) {
+        const simpleArea = area.split(',')[0].trim();
+        const base = wp.name.replace(/^Unnamed\s*/i, '');
+        wp.name = `${base.charAt(0).toUpperCase() + base.slice(1)} near ${simpleArea}`;
+      }
+    }
+  }
+
   const durationMin = Math.round(dist / WALK_SPEED_M_PER_MIN);
   const meta = WALK_TYPES[type];
   const summary = waypoints.length

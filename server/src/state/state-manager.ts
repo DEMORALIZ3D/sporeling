@@ -178,6 +178,18 @@ class StateManager extends EventEmitter {
     const petState = this.getCalculatedState();
     return { petState, vitalityRestored };
   }
+
+  public resetPetToHealthy(): PetState {
+    const now = Date.now();
+    db.prepare(`
+      UPDATE pet_state
+      SET hunger = 88.0, hydration = 88.0, vitality = 92.0, last_tick_at = ?
+      WHERE id = ?
+    `).run(now, 'primary_familiar');
+    const state = this.getCalculatedState();
+    this.emit('state_update', state);
+    return state;
+  }
 }
 
 export const stateManager = StateManager.getInstance();
