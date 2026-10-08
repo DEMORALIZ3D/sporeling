@@ -1,7 +1,7 @@
-import Database from 'better-sqlite3';
-import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
+import Database from 'better-sqlite3';
 
 const DB_DIR = path.join(os.homedir(), '.sporeling');
 if (!fs.existsSync(DB_DIR)) {
@@ -109,20 +109,41 @@ export function initDatabase() {
   `);
 
   // Idempotent column migrations
-  const cols = new Set((db.prepare('PRAGMA table_info(captures)').all() as { name: string }[]).map((c) => c.name));
-  const addCol = (name: string, def: string) => { if (!cols.has(name)) db.exec(`ALTER TABLE captures ADD COLUMN ${name} ${def}`); };
+  const cols = new Set(
+    (db.prepare('PRAGMA table_info(captures)').all() as { name: string }[]).map(
+      (c) => c.name,
+    ),
+  );
+  const addCol = (name: string, def: string) => {
+    if (!cols.has(name))
+      db.exec(`ALTER TABLE captures ADD COLUMN ${name} ${def}`);
+  };
   addCol('is_night', 'INTEGER NOT NULL DEFAULT 0');
   addCol('stars_visible', 'INTEGER NOT NULL DEFAULT 0');
   addCol('sky_report', 'TEXT');
   addCol('audio_path', 'TEXT');
 
   // Ensure default pet state row exists
-  const existing = db.prepare('SELECT id FROM pet_state WHERE id = ?').get('primary_familiar');
+  const existing = db
+    .prepare('SELECT id FROM pet_state WHERE id = ?')
+    .get('primary_familiar');
   if (!existing) {
     const now = Date.now();
     db.prepare(`
       INSERT INTO pet_state (id, name, level, exp, hunger, hydration, vitality, affinity, total_steps, last_tick_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('primary_familiar', 'Sporeling', 1, 0, 85.0, 85.0, 95.0, 'arboreal', 0, now, now);
+    `).run(
+      'primary_familiar',
+      'Sporeling',
+      1,
+      0,
+      85.0,
+      85.0,
+      95.0,
+      'arboreal',
+      0,
+      now,
+      now,
+    );
   }
 }

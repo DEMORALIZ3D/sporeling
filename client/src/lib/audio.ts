@@ -18,7 +18,7 @@ export function playBase64Wav(base64Wav: string, onEnded?: () => void) {
       audio.onerror = onEnded;
     }
 
-    audio.play().catch(err => {
+    audio.play().catch((err) => {
       console.warn('Audio auto-play prevented or failed:', err);
       if (onEnded) onEnded();
     });
@@ -41,7 +41,13 @@ export function speakWebSpeech(text: string, onEnded?: () => void) {
   utterance.rate = 1.05;
 
   const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha')));
+  const preferredVoice = voices.find(
+    (v) =>
+      v.lang.startsWith('en') &&
+      (v.name.includes('Natural') ||
+        v.name.includes('Google') ||
+        v.name.includes('Samantha')),
+  );
   if (preferredVoice) {
     utterance.voice = preferredVoice;
   }
@@ -64,15 +70,17 @@ export interface SpeechRecognizer {
 export function createSpeechRecognizer(
   onResult: (text: string) => void,
   onError: (err: any) => void,
-  onEnd: () => void
+  onEnd: () => void,
 ): SpeechRecognizer {
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const SpeechRecognition =
+    (window as any).SpeechRecognition ||
+    (window as any).webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
     return {
       start: () => {},
       stop: () => {},
-      isSupported: false
+      isSupported: false,
     };
   }
 
@@ -105,10 +113,10 @@ export function createSpeechRecognizer(
     stop: () => {
       try {
         recognition.stop();
-      } catch (err) {
+      } catch (_err) {
         // Ignored
       }
     },
-    isSupported: true
+    isSupported: true,
   };
 }

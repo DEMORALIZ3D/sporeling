@@ -13,7 +13,14 @@
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
-  "keywords": ["hacktoberfest", "gemma", "touch-grass", "threejs", "virtual-pet", "ai-companion"],
+  "keywords": [
+    "hacktoberfest",
+    "gemma",
+    "touch-grass",
+    "threejs",
+    "virtual-pet",
+    "ai-companion"
+  ],
   "author": "",
   "license": "MIT"
 }

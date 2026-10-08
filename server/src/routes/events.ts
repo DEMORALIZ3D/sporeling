@@ -6,8 +6,8 @@ export const eventsRoutes: FastifyPluginAsync = async (fastify) => {
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*'
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
     });
 
     // Send initial state immediately

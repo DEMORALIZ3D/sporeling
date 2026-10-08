@@ -32,13 +32,26 @@ export interface CaptureRecord {
   thumbUrl: string;
 }
 
-export interface SkyObject { name: string; kind: string; altitude: number; azimuth: number; direction: string; magnitude?: number; constellation?: string }
+export interface SkyObject {
+  name: string;
+  kind: string;
+  altitude: number;
+  azimuth: number;
+  direction: string;
+  magnitude?: number;
+  constellation?: string;
+}
 export interface SkyReport {
   isNight: boolean;
   sunAltitude: number;
   twilight: string;
   zenithConstellation: string;
-  moon: { altitude: number; direction: string; illuminationPct: number; phaseName: string } | null;
+  moon: {
+    altitude: number;
+    direction: string;
+    illuminationPct: number;
+    phaseName: string;
+  } | null;
   planets: SkyObject[];
   stars: SkyObject[];
   constellations: string[];
@@ -71,14 +84,20 @@ export interface CaptureMeta {
   zoom?: number;
 }
 
-export async function startCaptureSession(): Promise<{ nonce: string; expiresAt: number }> {
+export async function startCaptureSession(): Promise<{
+  nonce: string;
+  expiresAt: number;
+}> {
   const res = await fetch('/api/capture/session', { method: 'POST' });
   if (!res.ok) throw new Error('Could not start field camera session');
   return res.json();
 }
 
 /** Queues a capture; the result arrives later via captureHub. */
-export async function submitCapture(image: Blob, meta: CaptureMeta): Promise<{ jobId: string; position: number }> {
+export async function submitCapture(
+  image: Blob,
+  meta: CaptureMeta,
+): Promise<{ jobId: string; position: number }> {
   const fd = new FormData();
   for (const [k, v] of Object.entries(meta)) {
     if (v !== undefined && v !== null) fd.append(k, String(v));
@@ -92,14 +111,21 @@ export async function submitCapture(image: Blob, meta: CaptureMeta): Promise<{ j
   return res.json();
 }
 
-export async function fetchAchievements(): Promise<{ achievements: AchievementStatus[]; unlockedSpecies: string[] }> {
+export async function fetchAchievements(): Promise<{
+  achievements: AchievementStatus[];
+  unlockedSpecies: string[];
+}> {
   const res = await fetch('/api/capture/achievements');
   if (!res.ok) return { achievements: [], unlockedSpecies: ['jolly'] };
   return res.json();
 }
 
-export async function fetchCaptures(category?: string): Promise<CaptureRecord[]> {
-  const res = await fetch('/api/capture/list' + (category ? `?category=${category}` : ''));
+export async function fetchCaptures(
+  category?: string,
+): Promise<CaptureRecord[]> {
+  const res = await fetch(
+    `/api/capture/list${category ? `?category=${category}` : ''}`,
+  );
   if (!res.ok) return [];
   return (await res.json()).captures;
 }

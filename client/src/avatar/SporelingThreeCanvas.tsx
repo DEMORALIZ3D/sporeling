@@ -1,18 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import type { PetState } from '../lib/types';
+import type { CreatureAction, PetState } from '../lib/types';
 import { createPlush, type PlushCreature } from './plush/createPlush';
 import type { SpeciesId } from './plush/species';
 
-export type CreatureAction =
-  | 'idle'
-  | 'thinking'
-  | 'searching'
-  | 'surprised'
-  | 'confident'
-  | 'celebrating'
-  | 'depleted'
-  | 'dormant';
+export type { CreatureAction };
 
 export type AvatarStyle = 'mochi' | 'orb';
 
@@ -84,13 +77,27 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
   currentAction = 'idle',
   isSpeaking,
   isFeeding,
-  onPoke
+  onPoke,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef({ petState, avatarStyle, species, currentAction, isSpeaking, isFeeding });
+  const stateRef = useRef({
+    petState,
+    avatarStyle,
+    species,
+    currentAction,
+    isSpeaking,
+    isFeeding,
+  });
 
   useEffect(() => {
-    stateRef.current = { petState, avatarStyle, species, currentAction, isSpeaking, isFeeding };
+    stateRef.current = {
+      petState,
+      avatarStyle,
+      species,
+      currentAction,
+      isSpeaking,
+      isFeeding,
+    };
   }, [petState, avatarStyle, species, currentAction, isSpeaking, isFeeding]);
 
   useEffect(() => {
@@ -99,7 +106,12 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
 
     // --- Scene & Renderer Setup ---
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(
+      40,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100,
+    );
     camera.position.set(0, 0, 7.8);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -117,11 +129,11 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       uniforms: {
         uTime: { value: 0 },
         uColorA: { value: new THREE.Color(0x064e3b) },
-        uColorB: { value: new THREE.Color(0x0284c7) }
+        uColorB: { value: new THREE.Color(0x0284c7) },
       },
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
     });
     const auroraMesh = new THREE.Mesh(auroraGeo, auroraMat);
     auroraMesh.position.set(0, 0, -2.5);
@@ -194,7 +206,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       clearcoatRoughness: 0.15,
       transmission: 0.15,
       emissive: 0x065f46,
-      emissiveIntensity: 0.5
+      emissiveIntensity: 0.5,
     });
 
     const mochiMesh = new THREE.Mesh(mochiGeo, mochiMat);
@@ -209,7 +221,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       const pupilMat = new THREE.MeshStandardMaterial({
         color: 0x060f0b,
         roughness: 0.05,
-        metalness: 0.1
+        metalness: 0.1,
       });
       const pupil = new THREE.Mesh(pupilGeo, pupilMat);
       pupil.scale.set(1.0, 1.25, 0.45);
@@ -221,7 +233,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
         color: 0x10b981,
         transparent: true,
         opacity: 0.55,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
       });
       const iris = new THREE.Mesh(irisGeo, irisMat);
       iris.position.set(0, -0.04, 0.11);
@@ -257,7 +269,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
         emissive: 0xdb2777,
         emissiveIntensity: 0.7,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.8,
       });
       const blush = new THREE.Mesh(blushGeo, blushMat);
       blush.scale.set(1.3, 0.7, 0.3);
@@ -273,10 +285,13 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
     const mouthCurve = new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(-0.12, 0.02, 0),
       new THREE.Vector3(0, -0.06, 0.03),
-      new THREE.Vector3(0.12, 0.02, 0)
+      new THREE.Vector3(0.12, 0.02, 0),
     );
     const mouthGeo = new THREE.TubeGeometry(mouthCurve, 20, 0.025, 8, false);
-    const mouthMat = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 0.3 });
+    const mouthMat = new THREE.MeshStandardMaterial({
+      color: 0x064e3b,
+      roughness: 0.3,
+    });
     const mouthMesh = new THREE.Mesh(mouthGeo, mouthMat);
     mochiGroup.add(mouthMesh);
 
@@ -289,14 +304,14 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 0.25, 0),
       new THREE.Vector3(0.06, 0.4, 0),
-      new THREE.Vector3(0.08, 0.55, 0)
+      new THREE.Vector3(0.08, 0.55, 0),
     );
     const stemGeo = new THREE.TubeGeometry(stemCurve, 16, 0.03, 8, false);
     const plantMat = new THREE.MeshStandardMaterial({
       color: 0x4ade80,
       roughness: 0.3,
       emissive: 0x15803d,
-      emissiveIntensity: 0.4
+      emissiveIntensity: 0.4,
     });
     const stemMesh = new THREE.Mesh(stemGeo, plantMat);
     sproutGroup.add(stemMesh);
@@ -334,7 +349,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       metalness: 0.1,
       transmission: 0.7,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.85,
     });
     const innerCore = new THREE.Mesh(innerCoreGeo, innerCoreMat);
     orbGroup.add(innerCore);
@@ -371,9 +386,10 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
 
       // Color gradient from top to bottom
       const mixRatio = (y + r) / (2 * r);
-      const dotColor = mixRatio > 0.5
-        ? colorEmerald.clone().lerp(colorCyan, (mixRatio - 0.5) * 2)
-        : colorPurple.clone().lerp(colorEmerald, mixRatio * 2);
+      const dotColor =
+        mixRatio > 0.5
+          ? colorEmerald.clone().lerp(colorCyan, (mixRatio - 0.5) * 2)
+          : colorPurple.clone().lerp(colorEmerald, mixRatio * 2);
 
       dotColors[i * 3] = dotColor.r;
       dotColors[i * 3 + 1] = dotColor.g;
@@ -390,7 +406,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       transparent: true,
       opacity: 0.95,
       blending: THREE.AdditiveBlending,
-      depthWrite: false
+      depthWrite: false,
     });
 
     const dotPoints = new THREE.Points(dotGeo, dotMat);
@@ -402,7 +418,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       color: 0x38bdf8,
       transparent: true,
       opacity: 0.5,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
     });
     const orbitalRing = new THREE.Mesh(ringGeo, ringMat);
     orbitalRing.rotation.x = Math.PI / 3;
@@ -435,7 +451,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       map: dotTex,
       transparent: true,
       opacity: 0.7,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
     });
     const sporePoints = new THREE.Points(sporeGeo, sporeMat);
     scene.add(sporePoints);
@@ -491,10 +507,26 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       lastPointerMove = clock.getElapsedTime();
 
       // Pupil tracking with cute bounds
-      leftEye.pupil.position.x = THREE.MathUtils.clamp(nx * 0.035, -0.035, 0.035);
-      leftEye.pupil.position.y = THREE.MathUtils.clamp(ny * 0.035, -0.035, 0.035);
-      rightEye.pupil.position.x = THREE.MathUtils.clamp(nx * 0.035, -0.035, 0.035);
-      rightEye.pupil.position.y = THREE.MathUtils.clamp(ny * 0.035, -0.035, 0.035);
+      leftEye.pupil.position.x = THREE.MathUtils.clamp(
+        nx * 0.035,
+        -0.035,
+        0.035,
+      );
+      leftEye.pupil.position.y = THREE.MathUtils.clamp(
+        ny * 0.035,
+        -0.035,
+        0.035,
+      );
+      rightEye.pupil.position.x = THREE.MathUtils.clamp(
+        nx * 0.035,
+        -0.035,
+        0.035,
+      );
+      rightEye.pupil.position.y = THREE.MathUtils.clamp(
+        ny * 0.035,
+        -0.035,
+        0.035,
+      );
     };
 
     const handlePointerUp = () => {
@@ -517,7 +549,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
     window.addEventListener('resize', handleResize);
 
     // --- Main Animation Loop ---
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
     let animationFrameId: number;
 
     const animate = () => {
@@ -554,7 +586,8 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       // Secondary Sprout Inertia Physics
       const sproutK = 18.0;
       const sproutDamp = 3.5;
-      const sproutForce = -sproutK * sproutWiggleZ - sproutDamp * sproutWiggleVel;
+      const sproutForce =
+        -sproutK * sproutWiggleZ - sproutDamp * sproutWiggleVel;
       sproutWiggleVel += sproutForce * delta;
       sproutWiggleZ += sproutWiggleVel * delta;
       sproutGroup.rotation.z = sproutWiggleZ;
@@ -595,7 +628,11 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
       const speakBounce = isSpeakingNow ? Math.sin(time * 18) * 0.04 : 0;
       const naturalBreath = Math.sin(time * 2.2) * 0.01;
 
-      const scaleY = Math.max(0.4, (squishScaleY + feedBounce + speakBounce + naturalBreath) * actionScaleMod);
+      const scaleY = Math.max(
+        0.4,
+        (squishScaleY + feedBounce + speakBounce + naturalBreath) *
+          actionScaleMod,
+      );
       const scaleXZ = (1.0 + (1.0 - scaleY) * 0.55) * actionScaleMod;
       rootGroup.scale.set(scaleXZ, scaleY, scaleXZ);
 
@@ -611,7 +648,8 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
           plushRoot.add(plush.group);
           pokeAt = time; // little hello wave
         }
-        const rotVel = (rootGroup.rotation.y - prevRotY) / Math.max(delta, 1e-3);
+        const rotVel =
+          (rootGroup.rotation.y - prevRotY) / Math.max(delta, 1e-3);
         wind.set(THREE.MathUtils.clamp(-rotVel * 0.02, -0.08, 0.08), 0, 0);
         plush.update({
           t: time,
@@ -623,7 +661,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
           feeding: isFeedingNow,
           sincePoke: time - pokeAt,
           pointerLook: time - lastPointerMove < 2.5 ? pointerLook : null,
-          wind
+          wind,
         });
       }
       prevRotY = rootGroup.rotation.y;
@@ -664,10 +702,14 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
         const surfaceR = BASE_RADIUS * 1.05;
 
         leftEye.eyeRoot.position.copy(leftEyeDir).multiplyScalar(surfaceR);
-        leftEye.eyeRoot.lookAt(leftEye.eyeRoot.position.clone().add(leftEyeDir));
+        leftEye.eyeRoot.lookAt(
+          leftEye.eyeRoot.position.clone().add(leftEyeDir),
+        );
 
         rightEye.eyeRoot.position.copy(rightEyeDir).multiplyScalar(surfaceR);
-        rightEye.eyeRoot.lookAt(rightEye.eyeRoot.position.clone().add(rightEyeDir));
+        rightEye.eyeRoot.lookAt(
+          rightEye.eyeRoot.position.clone().add(rightEyeDir),
+        );
 
         leftBlush.position.copy(leftBlushDir).multiplyScalar(surfaceR - 0.02);
         leftBlush.lookAt(leftBlush.position.clone().add(leftBlushDir));
@@ -679,7 +721,11 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
         mouthMesh.lookAt(mouthMesh.position.clone().add(mouthDir));
 
         // Anime Eye Blinking
-        if (currentAction !== 'dormant' && mood !== 'dormant' && currentAction !== 'surprised') {
+        if (
+          currentAction !== 'dormant' &&
+          mood !== 'dormant' &&
+          currentAction !== 'surprised'
+        ) {
           blinkTimer += delta;
           if (!isBlinking && blinkTimer > 3.8 + Math.sin(time) * 1.5) {
             isBlinking = true;
@@ -701,7 +747,11 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
 
         // Talking mouth shape
         if (isSpeakingNow) {
-          mouthMesh.scale.set(1.2, 1.0 + Math.abs(Math.sin(time * 14)) * 1.8, 1);
+          mouthMesh.scale.set(
+            1.2,
+            1.0 + Math.abs(Math.sin(time * 14)) * 1.8,
+            1,
+          );
         } else if (currentAction !== 'surprised') {
           mouthMesh.scale.set(1, 1, 1);
         }
@@ -723,7 +773,9 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
           // Concentric spherical harmonic waves (OpenAI voice mode wave ripples)
           const angle = Math.atan2(bz, bx);
           const elevation = Math.asin(by / 1.85);
-          const ripple = Math.sin(angle * 3.0 + elevation * 4.0 - time * waveSpeed) * audioWaveAmp;
+          const ripple =
+            Math.sin(angle * 3.0 + elevation * 4.0 - time * waveSpeed) *
+            audioWaveAmp;
 
           dPos[i * 3] = bx * (1 + ripple);
           dPos[i * 3 + 1] = by * (1 + ripple);
@@ -785,7 +837,7 @@ export const SporelingThreeCanvas: React.FC<SporelingThreeCanvasProps> = ({
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [onPoke]);
 
   return (
     <div

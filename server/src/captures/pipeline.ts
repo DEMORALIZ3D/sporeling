@@ -1,9 +1,9 @@
-import sharp from 'sharp';
-import exifr from 'exifr';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import exifr from 'exifr';
+import sharp from 'sharp';
 
 export const CAPTURE_DIR = path.join(os.homedir(), '.sporeling', 'captures');
 fs.mkdirSync(CAPTURE_DIR, { recursive: true });
@@ -35,16 +35,21 @@ export function validateCaptureNonce(nonce: string | undefined): boolean {
 // Image processing
 // ---------------------------------------------------------------------------
 export interface ProcessedImage {
-  llmJpeg: Buffer;      // small JPEG for Gemma (≤ 768px)
+  llmJpeg: Buffer; // small JPEG for Gemma (≤ 768px)
   width: number;
   height: number;
-  dhash: string;        // 64-bit difference hash (hex)
+  dhash: string; // 64-bit difference hash (hex)
   exif: Record<string, unknown> | null;
 }
 
 /** 64-bit dHash: grayscale 9x8, compare horizontal neighbours. */
 async function differenceHash(buf: Buffer): Promise<string> {
-  const px = await sharp(buf).rotate().greyscale().resize(9, 8, { fit: 'fill' }).raw().toBuffer();
+  const px = await sharp(buf)
+    .rotate()
+    .greyscale()
+    .resize(9, 8, { fit: 'fill' })
+    .raw()
+    .toBuffer();
   let bits = 0n;
   for (let y = 0; y < 8; y++) {
     for (let x = 0; x < 8; x++) {
@@ -55,23 +60,44 @@ async function differenceHash(buf: Buffer): Promise<string> {
 }
 
 export function hammingDistance(a: string, b: string): number {
-  let v = BigInt('0x' + a) ^ BigInt('0x' + b);
+  let v = BigInt(`0x${a}`) ^ BigInt(`0x${b}`);
   let n = 0;
-  while (v) { n += Number(v & 1n); v >>= 1n; }
+  while (v) {
+    n += Number(v & 1n);
+    v >>= 1n;
+  }
   return n;
 }
 
 export async function processCapture(raw: Buffer): Promise<ProcessedImage> {
   let exif: Record<string, unknown> | null = null;
   try {
-    const parsed = await exifr.parse(raw, { gps: true, tiff: true, exif: true });
+    const parsed = await exifr.parse(raw, {
+      gps: true,
+      tiff: true,
+      exif: true,
+    });
     if (parsed) {
       exif = {};
-      for (const k of ['Make', 'Model', 'DateTimeOriginal', 'latitude', 'longitude', 'GPSAltitude', 'ExposureTime', 'FNumber', 'ISO', 'FocalLength', 'LensModel']) {
+      for (const k of [
+        'Make',
+        'Model',
+        'DateTimeOriginal',
+        'latitude',
+        'longitude',
+        'GPSAltitude',
+        'ExposureTime',
+        'FNumber',
+        'ISO',
+        'FocalLength',
+        'LensModel',
+      ]) {
         if (parsed[k] !== undefined) exif[k] = parsed[k];
       }
     }
-  } catch { /* in-app canvas captures carry no EXIF; metadata comes from the client */ }
+  } catch {
+    /* in-app canvas captures carry no EXIF; metadata comes from the client */
+  }
 
   const llmJpeg = await sharp(raw)
     .rotate()
@@ -81,14 +107,26 @@ export async function processCapture(raw: Buffer): Promise<ProcessedImage> {
   const meta = await sharp(llmJpeg).metadata();
   const dhash = await differenceHash(raw);
 
-  return { llmJpeg, width: meta.width ?? 0, height: meta.height ?? 0, dhash, exif };
+  return {
+    llmJpeg,
+    width: meta.width ?? 0,
+    height: meta.height ?? 0,
+    dhash,
+    exif,
+  };
 }
 
 /** Persist the LLM-sized image + a 256px thumbnail. */
-export async function saveCaptureFiles(id: string, llmJpeg: Buffer): Promise<{ imagePath: string; thumbPath: string }> {
+export async function saveCaptureFiles(
+  id: string,
+  llmJpeg: Buffer,
+): Promise<{ imagePath: string; thumbPath: string }> {
   const imagePath = path.join(CAPTURE_DIR, `${id}.jpg`);
   const thumbPath = path.join(CAPTURE_DIR, `${id}_thumb.jpg`);
   await fs.promises.writeFile(imagePath, llmJpeg);
-  await sharp(llmJpeg).resize(256, 256, { fit: 'cover' }).jpeg({ quality: 75 }).toFile(thumbPath);
+  await sharp(llmJpeg)
+    .resize(256, 256, { fit: 'cover' })
+    .jpeg({ quality: 75 })
+    .toFile(thumbPath);
   return { imagePath, thumbPath };
 }

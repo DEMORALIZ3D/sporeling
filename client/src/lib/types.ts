@@ -1,4 +1,9 @@
-export type AffinityType = 'arboreal' | 'fungal' | 'aquatic' | 'mineral' | 'invalid';
+export type AffinityType =
+  | 'arboreal'
+  | 'fungal'
+  | 'aquatic'
+  | 'mineral'
+  | 'invalid';
 export type MoodType = 'thriving' | 'content' | 'depleted' | 'dormant';
 
 export type CreatureAction =

@@ -1,104 +1,195 @@
-# Sporeling (The Biome Familiar) 🌿🍄💧
+# Sporeling (The Biome Familiar) 🌿🍄⭐
 
-> **Hacktoberfest 2026 DEV Challenge — Week 1: "Touch Grass"**  
-> *Target Categories:* **Best Use of Gemma** ($200) & **Overall Challenge Winner** ($250)
-
-Sporeling is an open-source, local-first virtual companion and personal memory assistant whose vitality, mood, and cognitive willingness are directly governed by real-world physical biology.
-
-To keep Sporeling alive, well-fed, and cooperative, you must physically disconnect from your desk and explore the outdoors—photographing wild flora, bark, and puddles, and logging physical outdoor walking sessions.
-
----
-
-## 🌟 Why Open Innovation Matters
-
-1. **Strict Zero-Telemetry Privacy:** Geolocation coordinates, personal memories, voice notes, and habitat photos never leave your local machine.
-2. **Zero API Cost & Infinite Inference:** Real-time multimodal vision inspection and expressive speech run locally without commercial rate limits, token fees, or cloud outages.
-3. **Air-Gapped Field Utility:** Capable of running headless on a laptop inside a backpack over an ad-hoc local Wi-Fi hotspot in remote woods with zero cellular reception.
-4. **Google Gemma 4 Edge Multimodal Power:** Uses Google's open-weight **Gemma 4 E2B** with multimodal projection (`mmproj`) for real-time botanical verification and anti-cheat enforcement.
+> **A local-first pocket plush pet that starves when you sit at your desk and thrives only when you step outdoors—photographing wild flora, moss, fungi, and night skies, verified by local Google Gemma 4 vision.**
+>
+> 🏆 **Built for the Hacktoberfest 2026 DEV Challenge — Week 1: "Touch Grass"**  
+> *Target Categories:* **Best Use of Gemma** & **Overall Challenge Winner**  
+> *Author:* Built with **Vibe Coding + Senior Engineering Rigor**
 
 ---
 
-## 🏗️ Technical Architecture
+![Sporeling Banner](docs/screenshots/desktop-home.png)
+
+## 💡 The Philosophy: Vibe Code + Senior Engineer Driven
+
+Sporeling was built from scratch within the Hacktoberfest challenge window, born from a synthesis of two modern development paradigms:
+
+1. **The Vibe Coding Velocity:**
+   - Rapid, generative, highly iterative pair programming in Google Antigravity (powered by Gemini 3.8 and Claude Opus).
+   - Instant exploration of procedural 3D graphics, shader experiments, natural-language walk generation, and lively audio interactions that would normally take a multi-person studio weeks to prototype.
+
+2. **The Senior Engineering Spine:**
+   - Grounded in 10+ years of production software architecture: strict typed contracts, zero vendor lock-in, zero cloud bloat.
+   - **Local-First & Zero-Telemetry Privacy:** Geolocation trails, camera frames, voice notes, and pet memory records never leave your local machine. All state is stored in a clean, portable SQLite database in WAL mode.
+   - **Pluggable Multi-Tier AI Architecture:** A modular runtime supporting any OpenAI-compatible endpoint (local `llama.cpp` Gemma 4 E2B default, Ollama, LM Studio, vLLM) coupled with a sub-300ms System-1 intent classifier adapter (Laya, HuggingFace Zero-Shot, Cohere/Jina Rerank, or Embeddings cosine scoring) that falls back gracefully to structured Gemma JSON mode.
+   - **Offline Woodland Reliability:** Pack a laptop in your backpack, connect your phone over local Wi-Fi, and walk deep into the woods with zero cellular signal—Gemma vision verification, procedural audio, and game state run completely self-contained.
+
+---
+
+## 📸 Interface & Walkthrough
+
+| Mobile View | Desktop Command Center |
+|---|---|
+| ![Mobile Home](docs/screenshots/mobile-home.png) | ![Desktop Home](docs/screenshots/desktop-home.png) |
+| *Procedural shell-fur plush familiar with reactive emotional states and HUD* | *Split-view desktop command center with live biome radar and vitals* |
+
+| OpenStreetMap Walk Route Radar | Hyperlocal Weather & Foraging Index |
+|---|---|
+| ![Walk Route](docs/screenshots/mobile-walk-route.png) | ![Weather Radar](docs/screenshots/mobile-weather-tokyo.png) |
+| *Real-time OSM Overpass + Foot routing generating custom trail loops* | *Open-Meteo integration computing real-time Moss & Fungal Bloom Index* |
+
+| Pluggable AI Setup & Diagnostics | Dynamic Walk Options |
+|---|---|
+| ![AI Setup](docs/screenshots/mobile-ai-setup.png) | ![Walk Options](docs/screenshots/mobile-walk-options.png) |
+| *One-tap switching between Local Gemma, Ollama, and System-1 Reflexes* | *Conversational duration and habitat selector (Park, Woods, Waterside, Country)* |
+
+---
+
+## 🌟 Key Features
+
+### 1. 🧸 Procedural 3D Shell-Fur Plush Avatar
+- Rendered live in Three.js using a multi-pass procedural shell-fur shader with UV-space strand cells that eliminate moiré artifacts.
+- Expressive physics-driven bead eyes, blush geometry, reactive nub arms, and an emotive state machine (`idle`, `thinking`, `searching`, `surprised`, `confident`, `celebrating`, `depleted`, `dormant`).
+- Unlockable species earned strictly outdoors: **Jolly** (starter), **Sprout** (25 plants/moss), **Shroom** (50 fungi), and **Pebble / Star** (50 night-sky captures).
+
+### 2. 📷 Anti-Cheat Botanical Field Camera & Vision Pipeline
+- In-app hardware camera only (no gallery uploads or spoofed files permitted).
+- Client-side EXIF stripping, hardware zoom constraints, and 64-bit dHash perceptual deduplication to prevent feeding Sporeling the same specimen twice.
+- Multimodal verification powered by **Gemma 4 E2B (`Q4_K_M`) + `mmproj-F16`**: checks authenticity, classifies specimen categories (`plant`, `fungi`, `moss`, `lichen`, `tree`, `water`, `sky`), extracts binomial scientific names, and detects indoor computer monitor spoofing.
+
+### 3. ⭐ Night Sky Celestial Engine ("Stargazer")
+- When pointing the camera upward at night, Sporeling leverages `astronomy-engine` and `satellite.js` with live CelesTrak TLE ephemerides.
+- Verifies solar depression angle at your exact GPS coordinates, calculates zenith constellations, planets, moon illumination, and visible orbital passes (including the ISS).
+- Gemma provides grounded celestial narration based strictly on computed astronomical telemetry.
+
+### 4. 🧭 OpenStreetMap Conversational Walk Planner
+- Say or type *"Plan me a 30-minute woodland walk"* or *"Find a waterside route"*.
+- Queries the Overpass API for real public footpaths, parks, canals, and nature reserves around your coordinates.
+- Calculates an optimal loop route using FOSSGIS OpenStreetMap foot routing and renders the interactive trail into the live radar compass.
+
+### 5. ⏳ Circadian Activity Rhythms & Time-Slice Decay
+- Configurable lifestyle profiles: *Always Outside*, *Balanced*, *Desk-Bound*, or *Custom*.
+- State decay is integrated dynamically in 15-minute time slices: pet metabolism pauses during sleep, naps during deep desk focus, and accelerates during lunch and evening hours to encourage you to touch grass.
+
+### 6. 🔌 Pluggable AI Engines & Privacy Guardrails
+- **Brain (Chat + Vision):** Defaults to fully local **Gemma 4 E2B** over `llama-server`. Compatible with any OpenAI-standard endpoint.
+- **Reflexes (Fast System-1 Classifier):** Pluggable adapters for Laya Native, HuggingFace Zero-Shot (DeBERTa), `/v1/rerank` (Cohere/Jina), or `/v1/embeddings` cosine scoring. Routes queries in ~100-300ms before falling back to Gemma JSON mode.
+- **Zero Cloud Leakage:** All API keys remain encrypted in local SQLite, masked in the UI, and automatically wiped if the endpoint hostname changes.
+
+---
+
+## 🏛️ System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             THE SPORELING LOOP                              │
-│                                                                             │
-│   [ Desk Work ] ──► Assistant gets tired/hungry ──► Sporeling nags user     │
-│          ▲                                                    │             │
-│          │                                                    ▼             │
-│   Sporeling unlocks                          User heads outdoors to woods/park│
-│   enhanced memory tools                                       │             │
-│          ▲                                                    ▼             │
-│          └─────── Gemma 4 E2B verifies flora ◄── Snaps moss, bark, puddles  │
-│                   Kokoro purrs via earbuds                                  │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                SPORELING ARCHITECTURE                                  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+ [ Client: Vite + React 19 + Tailwind + Three.js PWA ]
+   │
+   ├── Three.js Shell-Fur Shader (60 FPS Procedural Plush Avatar)
+   ├── In-App Field Viewfinder (Pinch Zoom, GPS Nonce, Perceptual dHash)
+   ├── Compass Radar Dial (OSM Geometry + iNaturalist Observation Vectors)
+   └── Resilient SSE Stream Receiver with Background Polling Fallback
+   │
+   ▼ HTTP / SSE (:3100)
+ [ Server: Node.js + Fastify + TypeScript ]
+   │
+   ├── State Manager & Time-Slice Decay Engine (Circadian Activity Profiles)
+   ├── Persistent Store: SQLite (WAL Mode) via better-sqlite3
+   ├── Geo Engine: Open-Meteo (Weather/Bloom), OSM Overpass, FOSSGIS Foot Routing
+   ├── Sky Engine: astronomy-engine + satellite.js + CelesTrak TLEs
+   └── Modular Provider Dispatcher
+         │
+         ├── [ Brain: Vision & Chat ] ──► Local Gemma 4 E2B (:8080) / OpenAI Endpoint
+         └── [ Reflexes: Classifier ] ──► Laya / HF Zero-Shot / Rerank / Gemma Fallback
 ```
 
-| Subsystem | Technology | Execution Target | Hardware & Performance |
+---
+
+## 🛠️ Stack & Specifications
+
+| Layer | Component | Specification | Details |
 |---|---|---|---|
-| **VLM & Function Calling** | **Gemma 4 E2B** (`Q4_K_M`) + `mmproj-F16` | NVIDIA RTX 5070 Mobile (8GB VRAM) via `llama.cpp` | ~3.2 GB VRAM; 55+ tok/sec |
-| **Speech Synthesis (TTS)** | **Kokoro-82M** (ONNX Runtime) | AMD Ryzen 9 9955HX (CPU) | ~350 MB RAM; <150ms RTF audio generation |
-| **Speech-to-Text (STT)** | **Web Speech API** + Whisper fallback | Edge Browser / Native Speech | Zero-latency instant client transcription |
-| **Procedural 3D Avatar** | **Three.js / WebGL Custom Shaders** | Client GPU | 60 FPS; dynamic simplex vertex noise & particles |
-| **Core Service / API** | **Fastify + TypeScript** | Node.js v22 Process | High throughput, non-blocking SSE streaming |
-| **Local Storage** | **SQLite (WAL Mode)** via `better-sqlite3` | Disk (`~/.sporeling/sporeling.db`) | Single-file portability, zero cloud overhead |
+| **Vision & VLM** | **Google Gemma 4 E2B** | `Q4_K_M` + `mmproj-F16` | Multimodal botanical & celestial verification via `llama.cpp` |
+| **TTS Speech** | **Kokoro-82M** | ONNX Runtime (CPU) | Sub-150ms RTF expressive character speech synthesis |
+| **STT Voice** | **Web Speech API** | Client Native | Instant zero-latency streaming voice recognition |
+| **3D Graphics** | **Three.js / WebGL** | Custom GLSL Shaders | Multi-layer procedural shell fur with simplex noise deformation |
+| **Backend** | **Fastify v5 + TS** | Node.js v22 | Non-blocking event streaming, multipart ingestion, strict validation |
+| **Database** | **SQLite (WAL Mode)** | `better-sqlite3` | Zero-dependency local persistence (`~/.sporeling/sporeling.db`) |
+| **Geo & Maps** | **OpenStreetMap** | Overpass API + OSRM | Keyless open geographic queries and foot routing |
+| **Weather** | **Open-Meteo** | Keyless Global API | Hyperlocal weather & calculation of Moss/Fungal Bloom Index |
+| **Astronomy** | **astronomy-engine** | Algorithmic + CelesTrak | Real-time solar position, planetary coordinates, and satellite passes |
+| **Code Quality** | **Biome & Fallow** | Rust Toolchains | Strict formatting, zero dead code, architecture health verified |
 
 ---
 
 ## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
-- Node.js 20+ (Node v22 recommended)
-- `llama-server.exe` with `gemma-4-E2B-it-Q4_K_M.gguf` and `mmproj-F16.gguf`
+- **Node.js 20+** (Node.js v22 LTS recommended)
+- **llama.cpp** (`llama-server`) with:
+  - Model: `gemma-4-E2B-it-Q4_K_M.gguf`
+  - Multimodal projector: `mmproj-F16.gguf`
+  *(Note: You can also point Sporeling at any OpenAI-compatible vision endpoint or Ollama in the in-app AI Setup panel).*
 
-### 2. Launch Local Gemma 4 E2B
-Run the included batch launcher to start the multimodal model on port 8080:
+### 2. Start the Local Gemma 4 Server
+On Windows:
 ```powershell
 .\start_llama.bat
 ```
+On Linux / macOS:
+```bash
+chmod +x ./start_llama.sh
+./start_llama.sh
+```
+*By default, the server listens at `http://127.0.0.1:8080/v1`.*
 
-### 3. Install & Start Sporeling
-```powershell
-# Install root, server, and client dependencies
+### 3. Install & Run Sporeling
+```bash
+# Install root, backend, and frontend dependencies
 npm install
 npm --prefix server install
 npm --prefix client install
 
-# Start both Fastify backend (:3100) and Vite PWA (:5173) concurrently
+# Start both backend (:3100) and frontend (:5174) concurrently
 npm run dev
 ```
 
-Open your browser at `http://localhost:5173` (or access from your mobile phone on LAN e.g. `http://192.168.0.xxx:5173`).
+Open your browser at **`http://localhost:5174`** (or access from your mobile phone via your local network IP e.g. `http://192.168.x.x:5174`).
 
 ---
 
-## 🎮 Core Gameplay & Outdoor Mechanics
+## 🧪 Code Quality & Architecture Health
 
-### 1. Procedural 3D Organic Sporeling
-- **Living 3D Organism:** Rendered dynamically with Three.js using real-time vertex noise deformation.
-- **Reactive Mood Shaders:** Shifts colors and glow based on vitality (emerald cyan when thriving, dry amber when thirsty, shiver purple when starved).
-- **Interactive Physics:** Drag to rotate in 3D; tap to squish with spring physics.
-- **Ambient Spore Particles:** Instanced bioluminescent particles that swirl around the creature.
+Sporeling is held to strict engineering standards:
+- **Biome** ensures lightning-fast linting, formatting, and import organization.
+- **Fallow** audits the repository for dead code, duplicate exports, and architectural coupling.
 
-### 2. Nature Feeding & Botanical Anti-Cheat
-- Tap **Feed Nature** to open the viewfinder.
-- Photographs are compressed client-side to $\le 1024 \times 1024$ and analyzed by Gemma 4 E2B.
-- Authentic outdoor moss, bark, wild fungi, and water grant **+Nutrition** and **+Hydration**.
-- **Anti-Cheat:** Pointing the camera at computer monitors, indoor clutter, or printed photos is detected and rejected with a playful spoken complaint.
+To verify repository health:
+```bash
+# Run Biome lint & format validation
+npx @biomejs/biome check .
 
-### 3. Outdoor Walk Mode ("Touch Grass")
-- Tap **Walk Mode** before heading outside.
-- Real-time GPS distance calculation and speed filtering verify authentic outdoor walking.
-- Completing a walk restores Sporeling's **Vitality** and awards Experience Points.
+# Run Fallow dead-code audit
+npx fallow dead-code
 
-### 4. Assistant Memory & Vitals Gating
-- Speak or type:
-  - `"Remember meeting at the park"` $\to$ Saves memory to root system.
-  - `"Recall park"` $\to$ Searches stored memories.
-- **Vitals Gated:** If Sporeling is starved below 40% Hunger, memory recall is locked (*"My thoughts are foggy... I am starving for wild nature. Feed me some forest moss first!"*).
+# Build both TypeScript projects
+npm run build
+```
 
 ---
 
-## 📝 License
-MIT License. Built for Hacktoberfest 2026.
+## 🔒 Security & Privacy Notice
+
+- **No Remote Telemetry:** No user analytics, trackers, or telemetry beacons are present in this repository.
+- **Local SQLite Storage:** All logs, captured photos, GPS locations, and companion memories are written exclusively to `~/.sporeling/sporeling.db`.
+- **API Key Safety:** When optional remote classifiers (e.g. Laya or custom endpoints) are configured, API keys are masked in the UI, stored locally in SQLite, and cleared automatically if the endpoint hostname changes to prevent key leakage.
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See [`LICENSE`](file:///c:/Users/disk_/Documents/antigravity/sharp-volta/LICENSE) for full details.
+
+Built with 🌿 for Hacktoberfest 2026. Touch grass, feed your familiar, and enjoy the outdoors!

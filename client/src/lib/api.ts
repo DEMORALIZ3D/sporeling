@@ -1,4 +1,9 @@
-import type { PetState, IngestionResult, WalkSessionResult, MemoryRecord, CompanionConverseResponse } from './types';
+import type {
+  CompanionConverseResponse,
+  MemoryRecord,
+  PetState,
+  WalkSessionResult,
+} from './types';
 
 const API_BASE = '/api';
 
@@ -8,39 +13,28 @@ export async function fetchPetState(): Promise<PetState> {
   return res.json();
 }
 
-export async function submitFeedPhoto(imageBlob: Blob): Promise<IngestionResult> {
-  const formData = new FormData();
-  formData.append('image', imageBlob, 'specimen.jpg');
-
-  const res = await fetch(`${API_BASE}/pet/feed`, {
-    method: 'POST',
-    body: formData
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to analyze specimen');
-  }
-
-  return res.json();
-}
-
-export async function submitWalkSession(durationSeconds: number, distanceMeters: number, stepCount: number): Promise<WalkSessionResult> {
+export async function submitWalkSession(
+  durationSeconds: number,
+  distanceMeters: number,
+  stepCount: number,
+): Promise<WalkSessionResult> {
   const res = await fetch(`${API_BASE}/pet/walk`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ durationSeconds, distanceMeters, stepCount })
+    body: JSON.stringify({ durationSeconds, distanceMeters, stepCount }),
   });
 
   if (!res.ok) throw new Error('Failed to log walk session');
   return res.json();
 }
 
-export async function sendCompanionVoiceText(text: string): Promise<CompanionConverseResponse> {
+export async function sendCompanionVoiceText(
+  text: string,
+): Promise<CompanionConverseResponse> {
   const res = await fetch(`${API_BASE}/companion/converse`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text }),
   });
 
   if (!res.ok) throw new Error('Failed to converse with companion');
@@ -54,7 +48,10 @@ export async function fetchMemories(): Promise<MemoryRecord[]> {
   return data.memories || [];
 }
 
-export async function fetchHistory(): Promise<{ ingestions: any[]; walks: any[] }> {
+export async function fetchHistory(): Promise<{
+  ingestions: any[];
+  walks: any[];
+}> {
   const res = await fetch(`${API_BASE}/pet/history`);
   if (!res.ok) return { ingestions: [], walks: [] };
   return res.json();
@@ -75,8 +72,15 @@ export interface UserSettings {
 }
 export interface SettingsSnapshot {
   settings: UserSettings;
-  presets: Record<ActivityProfile, { label: string; blurb: string; goal: number }>;
-  now: { mult: number; phase: 'sleeping' | 'work_nap' | 'pressure' | 'normal'; outdoorMinutesToday: number };
+  presets: Record<
+    ActivityProfile,
+    { label: string; blurb: string; goal: number }
+  >;
+  now: {
+    mult: number;
+    phase: 'sleeping' | 'work_nap' | 'pressure' | 'normal';
+    outdoorMinutesToday: number;
+  };
 }
 
 export async function fetchSettings(): Promise<SettingsSnapshot> {
@@ -84,11 +88,13 @@ export async function fetchSettings(): Promise<SettingsSnapshot> {
   return res.json();
 }
 
-export async function saveSettings(patch: Partial<UserSettings>): Promise<SettingsSnapshot> {
+export async function saveSettings(
+  patch: Partial<UserSettings>,
+): Promise<SettingsSnapshot> {
   const res = await fetch(`${API_BASE}/settings`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(patch)
+    body: JSON.stringify(patch),
   });
   return res.json();
 }

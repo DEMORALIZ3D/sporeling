@@ -1,7 +1,13 @@
-import * as THREE from 'three';
+import type * as THREE from 'three';
 
 export type SpeciesId = 'jolly' | 'sprout' | 'shroom' | 'pebble';
-export type AccessoryId = 'none' | 'sprout' | 'cap' | 'headphones' | 'scarf' | 'pocket';
+export type AccessoryId =
+  | 'none'
+  | 'sprout'
+  | 'cap'
+  | 'headphones'
+  | 'scarf'
+  | 'pocket';
 
 export interface SpeciesDef {
   id: SpeciesId;
@@ -50,7 +56,7 @@ export const SPECIES: SpeciesDef[] = [
       let py = y * R * 1.2;
       if (py < -1.25) py = -1.25 + (py + 1.25) * 0.25; // flat seated base
       out.set(x * R * flare, py, z * R * flare * 0.95);
-    }
+    },
   },
   {
     id: 'sprout',
@@ -72,7 +78,7 @@ export const SPECIES: SpeciesDef[] = [
       let py = y * R * 1.05;
       if (py < -1.35) py = -1.35 + (py + 1.35) * 0.3;
       out.set(x * R * plump, py, z * R * plump);
-    }
+    },
   },
   {
     id: 'shroom',
@@ -94,7 +100,7 @@ export const SPECIES: SpeciesDef[] = [
       if (py < -1.0) py = -1.0 + (py + 1.0) * 0.3;
       const w = 1.0 + 0.06 * Math.max(0, -y);
       out.set(x * R * w, py, z * R * w);
-    }
+    },
   },
   {
     id: 'pebble',
@@ -114,11 +120,11 @@ export const SPECIES: SpeciesDef[] = [
     deform: (x, y, z, out) => {
       const a = Math.atan2(x, y);
       const planar = Math.sqrt(x * x + y * y);
-      const k = Math.pow(0.5 + 0.5 * Math.cos(5 * a), 2.2);
+      const k = (0.5 + 0.5 * Math.cos(5 * a)) ** 2.2;
       const m = R * (0.86 + 0.5 * k * planar * planar);
       out.set(x * m, y * m, z * R * 0.78);
-    }
-  }
+    },
+  },
 ];
 
 export const getSpecies = (id: SpeciesId): SpeciesDef =>

@@ -1,15 +1,20 @@
 import { EventEmitter } from 'node:events';
 import { db } from '../db/index.js';
-import type { PetState, MoodType, AffinityType } from './types.js';
 import { effectiveHours } from './settings.js';
+import type { AffinityType, MoodType, PetState } from './types.js';
 
 class StateManager extends EventEmitter {
   private static instance: StateManager;
-  private lastLocation: { lat: number; lng: number; accuracy: number; timestamp: number } = {
+  private lastLocation: {
+    lat: number;
+    lng: number;
+    accuracy: number;
+    timestamp: number;
+  } = {
     lat: 51.5074,
     lng: -0.1278,
     accuracy: 50,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 
   private constructor() {
@@ -37,7 +42,9 @@ class StateManager extends EventEmitter {
   }
 
   public getCalculatedState(): PetState {
-    const row = db.prepare('SELECT * FROM pet_state WHERE id = ?').get('primary_familiar') as any;
+    const row = db
+      .prepare('SELECT * FROM pet_state WHERE id = ?')
+      .get('primary_familiar') as any;
     if (!row) {
       throw new Error('Pet state not found');
     }
@@ -48,11 +55,18 @@ class StateManager extends EventEmitter {
     const effHours = effectiveHours(row.last_tick_at, now);
 
     // Base decay rates per hour: Hunger 4.0%, Hydration 5.0%, Vitality 3.0%
-    const newHunger = Math.max(0, Math.min(100, row.hunger - (effHours * 4.0)));
-    const newHydration = Math.max(0, Math.min(100, row.hydration - (effHours * 5.0)));
-    const newVitality = Math.max(0, Math.min(100, row.vitality - (effHours * 3.0)));
+    const newHunger = Math.max(0, Math.min(100, row.hunger - effHours * 4.0));
+    const newHydration = Math.max(
+      0,
+      Math.min(100, row.hydration - effHours * 5.0),
+    );
+    const newVitality = Math.max(
+      0,
+      Math.min(100, row.vitality - effHours * 3.0),
+    );
 
-    if (elapsedHours > (1 / 60)) { // Update DB if more than 1 minute has elapsed
+    if (elapsedHours > 1 / 60) {
+      // Update DB if more than 1 minute has elapsed
       db.prepare(`
         UPDATE pet_state
         SET hunger = ?, hydration = ?, vitality = ?, last_tick_at = ?
@@ -80,18 +94,22 @@ class StateManager extends EventEmitter {
       last_tick_at: now,
       created_at: row.created_at,
       mood,
-      vitalityIndex: Math.round(vitalityIndex * 10) / 10
+      vitalityIndex: Math.round(vitalityIndex * 10) / 10,
     };
 
     this.emit('state_update', state);
     return state;
   }
 
-  public applyIngestion(nutrition: number, hydration: number, affinity: AffinityType): PetState {
+  public applyIngestion(
+    nutrition: number,
+    hydration: number,
+    affinity: AffinityType,
+  ): PetState {
     const current = this.getCalculatedState();
     const updatedHunger = Math.min(100, current.hunger + nutrition);
     const updatedHydration = Math.min(100, current.hydration + hydration);
-    
+
     // Gain EXP on feeding
     let updatedExp = current.exp + Math.round((nutrition + hydration) / 2);
     let updatedLevel = current.level;
@@ -106,16 +124,31 @@ class StateManager extends EventEmitter {
       UPDATE pet_state
       SET hunger = ?, hydration = ?, exp = ?, level = ?, affinity = ?, last_tick_at = ?
       WHERE id = ?
-    `).run(updatedHunger, updatedHydration, updatedExp, updatedLevel, affinity, now, 'primary_familiar');
+    `).run(
+      updatedHunger,
+      updatedHydration,
+      updatedExp,
+      updatedLevel,
+      affinity,
+      now,
+      'primary_familiar',
+    );
 
     return this.getCalculatedState();
   }
 
-  public applyWalkSession(durationSeconds: number, distanceMeters: number, stepCount: number): { petState: PetState; vitalityRestored: number } {
+  public applyWalkSession(
+    durationSeconds: number,
+    distanceMeters: number,
+    stepCount: number,
+  ): { petState: PetState; vitalityRestored: number } {
     const current = this.getCalculatedState();
-    
+
     // 1 km or ~15 mins walk restores up to 35% vitality
-    const vitalityRestored = Math.min(45, Math.round((durationSeconds / 60) * 1.5 + (distanceMeters / 100) * 2.0));
+    const vitalityRestored = Math.min(
+      45,
+      Math.round((durationSeconds / 60) * 1.5 + (distanceMeters / 100) * 2.0),
+    );
     const updatedVitality = Math.min(100, current.vitality + vitalityRestored);
     const updatedTotalSteps = current.total_steps + stepCount;
 
@@ -133,7 +166,14 @@ class StateManager extends EventEmitter {
       UPDATE pet_state
       SET vitality = ?, total_steps = ?, exp = ?, level = ?, last_tick_at = ?
       WHERE id = ?
-    `).run(updatedVitality, updatedTotalSteps, updatedExp, updatedLevel, now, 'primary_familiar');
+    `).run(
+      updatedVitality,
+      updatedTotalSteps,
+      updatedExp,
+      updatedLevel,
+      now,
+      'primary_familiar',
+    );
 
     const petState = this.getCalculatedState();
     return { petState, vitalityRestored };

@@ -98,7 +98,11 @@ export interface FurUniforms {
   uGlow: { value: number };
 }
 
-export function createFurUniforms(color: number, tip: number, furLen: number): FurUniforms {
+export function createFurUniforms(
+  color: number,
+  tip: number,
+  furLen: number,
+): FurUniforms {
   return {
     uTime: { value: 0 },
     uFurLen: { value: furLen },
@@ -108,7 +112,7 @@ export function createFurUniforms(color: number, tip: number, furLen: number): F
     uRim: { value: new THREE.Color(0xcffafe) },
     uWind: { value: new THREE.Vector3() },
     uDesat: { value: 0 },
-    uGlow: { value: 0 }
+    uGlow: { value: 0 },
   };
 }
 
@@ -116,7 +120,7 @@ export function createFurUniforms(color: number, tip: number, furLen: number): F
 export function createFurMesh(
   geometry: THREE.BufferGeometry,
   uniforms: FurUniforms,
-  shells = 20
+  shells = 20,
 ): { group: THREE.Group; materials: THREE.ShaderMaterial[] } {
   const group = new THREE.Group();
   const materials: THREE.ShaderMaterial[] = [];
@@ -124,7 +128,7 @@ export function createFurMesh(
     const mat = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
-      uniforms: { ...uniforms, uShell: { value: i / shells } }
+      uniforms: { ...uniforms, uShell: { value: i / shells } },
     });
     materials.push(mat);
     const mesh = new THREE.Mesh(geometry, mat);

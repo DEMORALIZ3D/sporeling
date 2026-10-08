@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Compass, Sparkles, Navigation, MapPin, ExternalLink, RefreshCw } from 'lucide-react';
-import { locationTracker, type GpsLocation } from '../../lib/location';
+import { Compass, ExternalLink, MapPin, RefreshCw } from 'lucide-react';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { type GpsLocation, locationTracker } from '../../lib/location';
 
 export interface NatureSighting {
   id: number;
@@ -24,27 +25,37 @@ interface BiomeRadarWidgetProps {
 
 export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
   initialObservations,
-  initialCategory = 'all'
+  initialCategory = 'all',
 }) => {
-  const [category, setCategory] = useState<'all' | 'fungi' | 'plants' | 'birds'>(initialCategory);
-  const [observations, setObservations] = useState<NatureSighting[]>(initialObservations || []);
-  const [gps, setGps] = useState<GpsLocation | null>(locationTracker.getLocation());
+  const [category, setCategory] = useState<
+    'all' | 'fungi' | 'plants' | 'birds'
+  >(initialCategory);
+  const [observations, setObservations] = useState<NatureSighting[]>(
+    initialObservations || [],
+  );
+  const [gps, setGps] = useState<GpsLocation | null>(
+    locationTracker.getLocation(),
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTarget, setSelectedTarget] = useState<NatureSighting | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<NatureSighting | null>(
+    null,
+  );
 
   useEffect(() => {
-    const unsub = locationTracker.onLocation(loc => {
+    const unsub = locationTracker.onLocation((loc) => {
       setGps(loc);
     });
     return unsub;
   }, []);
 
-  const fetchObservations = async () => {
+  const fetchObservations = useCallback(async () => {
     setIsLoading(true);
     try {
       const lat = gps?.latitude ?? 51.5074;
       const lng = gps?.longitude ?? -0.1278;
-      const res = await fetch(`/api/pet/nature-map?lat=${lat}&lng=${lng}&category=${category}`);
+      const res = await fetch(
+        `/api/pet/nature-map?lat=${lat}&lng=${lng}&category=${category}`,
+      );
       if (res.ok) {
         const data = await res.json();
         setObservations(data.observations || []);
@@ -54,11 +65,11 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [gps?.latitude, gps?.longitude, category]);
 
   useEffect(() => {
     fetchObservations();
-  }, [category, gps?.latitude, gps?.longitude]);
+  }, [fetchObservations]);
 
   return (
     <div className="bg-slate-900/95 border border-emerald-800/80 rounded-2xl p-4 shadow-2xl backdrop-blur-xl">
@@ -88,13 +99,15 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
           className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-emerald-400 disabled:opacity-50 transition-colors"
           title="Refresh Radar"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`}
+          />
         </button>
       </div>
 
       {/* Category Filter Chips */}
       <div className="flex gap-1.5 p-1 bg-slate-950/80 rounded-xl mb-3 border border-slate-800 text-[11px] font-bold">
-        {(['all', 'fungi', 'plants', 'birds'] as const).map(cat => (
+        {(['all', 'fungi', 'plants', 'birds'] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => setCategory(cat)}
@@ -104,7 +117,13 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            {cat === 'all' ? 'All' : cat === 'fungi' ? '🍄 Shrooms' : cat === 'plants' ? '🌿 Flora' : '🦅 Birds'}
+            {cat === 'all'
+              ? 'All'
+              : cat === 'fungi'
+                ? '🍄 Shrooms'
+                : cat === 'plants'
+                  ? '🌿 Flora'
+                  : '🦅 Birds'}
           </button>
         ))}
       </div>
@@ -135,13 +154,18 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
             S: Math.PI / 2,
             SW: (3 * Math.PI) / 4,
             W: Math.PI,
-            NW: (-3 * Math.PI) / 4
+            NW: (-3 * Math.PI) / 4,
           };
-          const angle = dirAngles[obs.direction] ?? (idx * 0.7);
+          const angle = dirAngles[obs.direction] ?? idx * 0.7;
           const bx = Math.cos(angle) * radPx;
           const by = Math.sin(angle) * radPx;
 
-          const dotColor = obs.category === 'fungi' ? 'bg-amber-400' : obs.category === 'birds' ? 'bg-sky-400' : 'bg-emerald-400';
+          const dotColor =
+            obs.category === 'fungi'
+              ? 'bg-amber-400'
+              : obs.category === 'birds'
+                ? 'bg-sky-400'
+                : 'bg-emerald-400';
 
           return (
             <button
@@ -173,7 +197,8 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
             )}
             <div className="truncate">
               <span className="text-[10px] font-mono uppercase text-emerald-400 font-bold block">
-                Target Lock • {selectedTarget.distanceMeters}m {selectedTarget.direction}
+                Target Lock • {selectedTarget.distanceMeters}m{' '}
+                {selectedTarget.direction}
               </span>
               <p className="text-xs font-extrabold text-slate-100 truncate">
                 {selectedTarget.commonName}
@@ -196,10 +221,12 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
       <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
         {observations.length === 0 ? (
           <p className="text-[11px] text-slate-400 text-center py-3">
-            {isLoading ? 'Polling nature maps & satellite sightings...' : 'No cataloged sightings right here. Walk towards wild parkland!'}
+            {isLoading
+              ? 'Polling nature maps & satellite sightings...'
+              : 'No cataloged sightings right here. Walk towards wild parkland!'}
           </p>
         ) : (
-          observations.slice(0, 6).map(obs => (
+          observations.slice(0, 6).map((obs) => (
             <div
               key={obs.id}
               className="flex items-center justify-between p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-emerald-800/60 text-xs transition-colors"
@@ -213,14 +240,20 @@ export const BiomeRadarWidget: React.FC<BiomeRadarWidgetProps> = ({
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-lg bg-emerald-950/80 border border-emerald-800/50 flex items-center justify-center shrink-0 text-emerald-400">
-                    {obs.category === 'fungi' ? '🍄' : obs.category === 'birds' ? '🦅' : '🌿'}
+                    {obs.category === 'fungi'
+                      ? '🍄'
+                      : obs.category === 'birds'
+                        ? '🦅'
+                        : '🌿'}
                   </div>
                 )}
                 <div className="truncate">
                   <p className="font-bold text-[11px] text-slate-200 truncate">
                     {obs.commonName}
                   </p>
-                  <p className="text-[9px] text-slate-400 italic truncate">{obs.scientificName}</p>
+                  <p className="text-[9px] text-slate-400 italic truncate">
+                    {obs.scientificName}
+                  </p>
                 </div>
               </div>
 

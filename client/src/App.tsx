@@ -1,20 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { SporelingThreeCanvas, type CreatureAction, type AvatarStyle } from './avatar/SporelingThreeCanvas';
-import { SPECIES, getSpecies, speciesForAffinity, type SpeciesId } from './avatar/plush/species';
-import { VitalsHUD } from './components/VitalsHUD';
-import { FieldCamera } from './components/FieldCamera';
-import { fetchAchievements, type AchievementStatus, type CaptureResult } from './lib/captureApi';
-import { captureHub } from './lib/captureHub';
+import { Bell, BookOpen, Camera, Footprints, Settings2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  getSpecies,
+  SPECIES,
+  type SpeciesId,
+  speciesForAffinity,
+} from './avatar/plush/species';
+import {
+  type AvatarStyle,
+  type CreatureAction,
+  SporelingThreeCanvas,
+} from './avatar/SporelingThreeCanvas';
 import { CaptureResultCard } from './components/CaptureResultCard';
-import { WalkModeModal } from './components/WalkModeModal';
-import { VoiceAssistantBar } from './components/VoiceAssistantBar';
-import { MemoriesDrawer } from './components/MemoriesDrawer';
 import { DesktopSidebar } from './components/DesktopSidebar';
+import { FieldCamera } from './components/FieldCamera';
+import { MemoriesDrawer } from './components/MemoriesDrawer';
+import { SettingsSheet } from './components/SettingsSheet';
+import { VitalsHUD } from './components/VitalsHUD';
+import { VoiceAssistantBar } from './components/VoiceAssistantBar';
+import { WalkModeModal } from './components/WalkModeModal';
 import { fetchPetState } from './lib/api';
+import {
+  type AchievementStatus,
+  type CaptureResult,
+  fetchAchievements,
+} from './lib/captureApi';
+import { captureHub } from './lib/captureHub';
 import { notificationManager } from './lib/notifications';
 import type { PetState } from './lib/types';
-import { Camera, Footprints, BookOpen, Bell, Settings2 } from 'lucide-react';
-import { SettingsSheet } from './components/SettingsSheet';
 
 export function App() {
   const [petState, setPetState] = useState<PetState | null>(null);
@@ -28,45 +41,68 @@ export function App() {
   const [isFeeding, setIsFeeding] = useState(false);
   const [alarmBanner, setAlarmBanner] = useState<string | null>(null);
   const [species, setSpecies] = useState<SpeciesId | null>(
-    () => (localStorage.getItem('sporeling.species') as SpeciesId | null)
+    () => localStorage.getItem('sporeling.species') as SpeciesId | null,
   );
-  const chooseSpecies = (id: SpeciesId) => {
+  const chooseSpecies = useCallback((id: SpeciesId) => {
     setSpecies(id);
     localStorage.setItem('sporeling.species', id);
-  };
+  }, []);
+  const handleFeedingSuccess = useCallback((result: any) => {
+    if (result.petState) {
+      setPetState(result.petState);
+    }
+    if (result.isAuthentic) {
+      setIsFeeding(true);
+      setCurrentAction('celebrating');
+      setTimeout(() => {
+        setIsFeeding(false);
+        setCurrentAction('idle');
+      }, 3500);
+    } else {
+      setCurrentAction('surprised');
+      setTimeout(() => setCurrentAction('idle'), 3000);
+    }
+  }, []);
   const [unlocked, setUnlocked] = useState<string[]>(['jolly']);
   const [achievements, setAchievements] = useState<AchievementStatus[]>([]);
   const [toast, setToast] = useState<CaptureResult | null>(null);
   useEffect(() => {
-    fetchAchievements().then((a) => { setUnlocked(a.unlockedSpecies); setAchievements(a.achievements); });
+    fetchAchievements().then((a) => {
+      setUnlocked(a.unlockedSpecies);
+      setAchievements(a.achievements);
+    });
     captureHub.start();
     return captureHub.subscribe({
       onResult: (r) => {
-        handleFeedingSuccess({ petState: r.petState, isAuthentic: r.capture.isAuthentic });
+        handleFeedingSuccess({
+          petState: r.petState,
+          isAuthentic: r.capture.isAuthentic,
+        });
         setAchievements(r.achievements);
         setUnlocked(r.unlockedSpecies);
         setToast(r);
         const fresh = r.newlyUnlocked.find((a) => a.unlocksSpecies);
         if (fresh) chooseSpecies(fresh.unlocksSpecies as SpeciesId);
-      }
+      },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [handleFeedingSuccess, chooseSpecies]);
   const isUnlocked = (id: SpeciesId) => unlocked.includes(id);
   const [lockHint, setLockHintRaw] = useState<SpeciesId | null>(null);
   const setLockHint = (id: SpeciesId) => {
     setLockHintRaw(id);
     setTimeout(() => setLockHintRaw((cur) => (cur === id ? null : cur)), 4000);
   };
-  const preferred: SpeciesId = species ?? speciesForAffinity(petState?.affinity);
+  const preferred: SpeciesId =
+    species ?? speciesForAffinity(petState?.affinity);
   const activeSpecies: SpeciesId = isUnlocked(preferred) ? preferred : 'jolly';
-  const lockInfo = (s: { unlockedBy?: string }) => achievements.find((a) => a.id === s.unlockedBy);
+  const lockInfo = (s: { unlockedBy?: string }) =>
+    achievements.find((a) => a.id === s.unlockedBy);
 
   // Fetch initial state & setup live Server-Sent Events (SSE)
   useEffect(() => {
     fetchPetState()
       .then(setPetState)
-      .catch(err => console.warn('Initial state fetch error:', err));
+      .catch((err) => console.warn('Initial state fetch error:', err));
 
     const eventSource = new EventSource('/api/events');
 
@@ -83,7 +119,7 @@ export function App() {
       console.warn('SSE connection interrupted, retrying in background...');
     };
 
-    const unsubAlarm = notificationManager.onAlarm(alarm => {
+    const unsubAlarm = notificationManager.onAlarm((alarm) => {
       setAlarmBanner(alarm.title);
       setCurrentAction('surprised');
       setTimeout(() => {
@@ -97,23 +133,6 @@ export function App() {
       unsubAlarm();
     };
   }, []);
-
-  const handleFeedingSuccess = (result: any) => {
-    if (result.petState) {
-      setPetState(result.petState);
-    }
-    if (result.isAuthentic) {
-      setIsFeeding(true);
-      setCurrentAction('celebrating');
-      setTimeout(() => {
-        setIsFeeding(false);
-        setCurrentAction('idle');
-      }, 3500);
-    } else {
-      setCurrentAction('surprised');
-      setTimeout(() => setCurrentAction('idle'), 3000);
-    }
-  };
 
   const handlePoke = () => {
     if ('vibrate' in navigator) {
@@ -170,29 +189,64 @@ export function App() {
                 return (
                   <button
                     key={s.id}
-                    onClick={() => (locked ? setLockHint(s.id) : chooseSpecies(s.id))}
-                    title={locked && info ? `${s.name} - locked: ${info.description} (${info.progress}/${info.goal})` : `${s.name} - ${s.blurb}`}
+                    onClick={() =>
+                      locked ? setLockHint(s.id) : chooseSpecies(s.id)
+                    }
+                    title={
+                      locked && info
+                        ? `${s.name} - locked: ${info.description} (${info.progress}/${info.goal})`
+                        : `${s.name} - ${s.blurb}`
+                    }
                     aria-label={s.name}
                     className={`relative w-10 h-10 rounded-full text-lg flex items-center justify-center transition-all duration-200 active:scale-90 ${
-                      activeSpecies === s.id ? 'bg-white/20 scale-110 ring-2 ring-emerald-300/70' : locked ? '' : 'opacity-60 hover:opacity-100'
+                      activeSpecies === s.id
+                        ? 'bg-white/20 scale-110 ring-2 ring-emerald-300/70'
+                        : locked
+                          ? ''
+                          : 'opacity-60 hover:opacity-100'
                     }`}
                   >
                     {locked && (
-                      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 40 40" aria-hidden>
-                        <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="2.5" />
-                        <circle cx="20" cy="20" r="18" fill="none" stroke="#fbbf24" strokeWidth="2.5"
-                          strokeDasharray={`${pct * 113} 113`} strokeLinecap="round" />
+                      <svg
+                        className="absolute inset-0 -rotate-90"
+                        viewBox="0 0 40 40"
+                        aria-hidden
+                      >
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r="18"
+                          fill="none"
+                          stroke="rgba(255,255,255,0.12)"
+                          strokeWidth="2.5"
+                        />
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r="18"
+                          fill="none"
+                          stroke="#fbbf24"
+                          strokeWidth="2.5"
+                          strokeDasharray={`${pct * 113} 113`}
+                          strokeLinecap="round"
+                        />
                       </svg>
                     )}
-                    <span className={locked ? 'grayscale opacity-40' : ''}>{s.emoji}</span>
-                    {locked && <span className="absolute -bottom-0.5 -right-0.5 text-[10px]">🔒</span>}
+                    <span className={locked ? 'grayscale opacity-40' : ''}>
+                      {s.emoji}
+                    </span>
+                    {locked && (
+                      <span className="absolute -bottom-0.5 -right-0.5 text-[10px]">
+                        🔒
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
             <p className="text-[11px] font-mono tracking-widest text-emerald-200/60 uppercase text-center px-4">
               {lockHint && lockInfo(getSpecies(lockHint))
-                ? `🔒 ${getSpecies(lockHint).name}: ${lockInfo(getSpecies(lockHint))!.description} ${lockInfo(getSpecies(lockHint))!.progress}/${lockInfo(getSpecies(lockHint))!.goal}`
+                ? `🔒 ${getSpecies(lockHint).name}: ${lockInfo(getSpecies(lockHint))?.description} ${lockInfo(getSpecies(lockHint))?.progress}/${lockInfo(getSpecies(lockHint))?.goal}`
                 : `${getSpecies(activeSpecies).name} • Drag to rotate • Tap to squish`}
             </p>
           </div>
@@ -275,7 +329,7 @@ export function App() {
       <WalkModeModal
         isOpen={isWalkModalOpen}
         onClose={() => setIsWalkModalOpen(false)}
-        onWalkComplete={res => setPetState(res.petState)}
+        onWalkComplete={(res) => setPetState(res.petState)}
       />
 
       <MemoriesDrawer
@@ -283,7 +337,10 @@ export function App() {
         onClose={() => setIsMemoriesOpen(false)}
       />
 
-      <SettingsSheet isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsSheet
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }

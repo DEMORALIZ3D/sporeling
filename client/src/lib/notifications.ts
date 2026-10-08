@@ -36,12 +36,16 @@ class NotificationManager {
     return [...this.alarms];
   }
 
-  public addAlarm(minutesFromNow: number, title: string, type: SporelingAlarm['type'] = 'walk'): SporelingAlarm {
+  public addAlarm(
+    minutesFromNow: number,
+    title: string,
+    type: SporelingAlarm['type'] = 'walk',
+  ): SporelingAlarm {
     const alarm: SporelingAlarm = {
-      id: 'alarm_' + Math.random().toString(36).substring(2, 9),
+      id: `alarm_${Math.random().toString(36).substring(2, 9)}`,
       title,
       fireAt: Date.now() + minutesFromNow * 60 * 1000,
-      type
+      type,
     };
 
     this.alarms.push(alarm);
@@ -50,14 +54,16 @@ class NotificationManager {
   }
 
   public removeAlarm(id: string) {
-    this.alarms = this.alarms.filter(a => a.id !== id);
+    this.alarms = this.alarms.filter((a) => a.id !== id);
     this.saveAlarms();
   }
 
   public onAlarm(callback: (alarm: SporelingAlarm) => void) {
     this.onAlarmTriggeredCallbacks.push(callback);
     return () => {
-      this.onAlarmTriggeredCallbacks = this.onAlarmTriggeredCallbacks.filter(cb => cb !== callback);
+      this.onAlarmTriggeredCallbacks = this.onAlarmTriggeredCallbacks.filter(
+        (cb) => cb !== callback,
+      );
     };
   }
 
@@ -65,11 +71,13 @@ class NotificationManager {
     if (this.checkInterval) clearInterval(this.checkInterval);
     this.checkInterval = setInterval(() => {
       const now = Date.now();
-      const ready = this.alarms.filter(a => a.fireAt <= now);
+      const ready = this.alarms.filter((a) => a.fireAt <= now);
       if (ready.length > 0) {
-        this.alarms = this.alarms.filter(a => a.fireAt > now);
+        this.alarms = this.alarms.filter((a) => a.fireAt > now);
         this.saveAlarms();
-        ready.forEach(a => this.triggerAlarm(a));
+        ready.forEach((a) => {
+          this.triggerAlarm(a);
+        });
       }
     }, 2000);
   }
@@ -77,7 +85,9 @@ class NotificationManager {
   private triggerAlarm(alarm: SporelingAlarm) {
     // 1. Play audio chime using Web Audio oscillator
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const ctx = new (
+        window.AudioContext || (window as any).webkitAudioContext
+      )();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -98,12 +108,14 @@ class NotificationManager {
       new Notification('🌿 Sporeling Reminder', {
         body: alarm.title,
         icon: '/spore.svg',
-        tag: alarm.id
+        tag: alarm.id,
       });
     }
 
     // 3. Notify subscribers in UI
-    this.onAlarmTriggeredCallbacks.forEach(cb => cb(alarm));
+    this.onAlarmTriggeredCallbacks.forEach((cb) => {
+      cb(alarm);
+    });
   }
 
   private saveAlarms() {
@@ -120,7 +132,9 @@ class NotificationManager {
       if (raw) {
         const parsed = JSON.parse(raw);
         const now = Date.now();
-        this.alarms = (parsed as SporelingAlarm[]).filter(a => a.fireAt > now);
+        this.alarms = (parsed as SporelingAlarm[]).filter(
+          (a) => a.fireAt > now,
+        );
       }
     } catch {
       this.alarms = [];

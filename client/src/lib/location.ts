@@ -24,7 +24,7 @@ class LocationTracker {
     if (this.watchId !== null) return;
 
     this.watchId = navigator.geolocation.watchPosition(
-      pos => {
+      (pos) => {
         const { latitude, longitude, accuracy, speed, altitude } = pos.coords;
         const loc: GpsLocation = {
           latitude,
@@ -32,10 +32,12 @@ class LocationTracker {
           accuracy: Math.round(accuracy),
           speed,
           altitude,
-          timestamp: pos.timestamp
+          timestamp: pos.timestamp,
         };
         this.currentLoc = loc;
-        this.listeners.forEach(cb => cb(loc));
+        this.listeners.forEach((cb) => {
+          cb(loc);
+        });
 
         // Throttle server sync to once every 20s or significant movement
         if (Date.now() - this.lastServerPing > 20000) {
@@ -43,14 +45,14 @@ class LocationTracker {
           this.syncToServer(loc);
         }
       },
-      err => {
+      (err) => {
         console.warn('[Location] GPS error:', err.message);
       },
       {
         enableHighAccuracy: true,
         maximumAge: 5000,
-        timeout: 12000
-      }
+        timeout: 12000,
+      },
     );
   }
 
@@ -69,7 +71,7 @@ class LocationTracker {
     this.listeners.push(callback);
     if (this.currentLoc) callback(this.currentLoc);
     return () => {
-      this.listeners = this.listeners.filter(cb => cb !== callback);
+      this.listeners = this.listeners.filter((cb) => cb !== callback);
     };
   }
 
@@ -78,7 +80,7 @@ class LocationTracker {
       await fetch('/api/pet/location', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loc)
+        body: JSON.stringify(loc),
       });
     } catch {
       // Offline

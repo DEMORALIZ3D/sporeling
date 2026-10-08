@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, Clock, Plus, Trash2, CheckCircle2 } from 'lucide-react';
-import { notificationManager, type SporelingAlarm } from '../../lib/notifications';
+import { Bell, CheckCircle2, Clock, Trash2 } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import {
+  notificationManager,
+  type SporelingAlarm,
+} from '../../lib/notifications';
 
 export const TouchGrassAlarmWidget: React.FC = () => {
   const [alarms, setAlarms] = useState<SporelingAlarm[]>([]);
-  const [hasPermission, setHasPermission] = useState(notificationManager.hasPermission());
+  const [hasPermission, setHasPermission] = useState(
+    notificationManager.hasPermission(),
+  );
   const [selectedMinutes, setSelectedMinutes] = useState(30);
 
   useEffect(() => {
@@ -22,8 +28,10 @@ export const TouchGrassAlarmWidget: React.FC = () => {
 
   const handleAddAlarm = (type: 'walk' | 'hydrate' | 'stretch') => {
     let title = '';
-    if (type === 'walk') title = `Time to Touch Grass! Take Sporeling on a ${selectedMinutes}m nature walk.`;
-    else if (type === 'hydrate') title = `Hydration Check: Sip water and nourish Sporeling's roots!`;
+    if (type === 'walk')
+      title = `Time to Touch Grass! Take Sporeling on a ${selectedMinutes}m nature walk.`;
+    else if (type === 'hydrate')
+      title = `Hydration Check: Sip water and nourish Sporeling's roots!`;
     else title = `Stretch & Eye Break: Step away from screens for 5 minutes.`;
 
     notificationManager.addAlarm(selectedMinutes, title, type);
@@ -67,7 +75,7 @@ export const TouchGrassAlarmWidget: React.FC = () => {
 
       {/* Quick Interval Selector */}
       <div className="flex items-center gap-1.5 mb-3 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
-        {[15, 30, 45, 60].map(mins => (
+        {[15, 30, 45, 60].map((mins) => (
           <button
             key={mins}
             onClick={() => setSelectedMinutes(mins)}
@@ -106,14 +114,16 @@ export const TouchGrassAlarmWidget: React.FC = () => {
             No active alarms. Set one to stay mindful while at your desk!
           </p>
         ) : (
-          alarms.map(a => (
+          alarms.map((a) => (
             <div
               key={a.id}
               className="flex items-center justify-between p-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs"
             >
               <div className="flex items-center gap-2 overflow-hidden">
                 <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span className="truncate text-slate-200 text-[11px]">{a.title}</span>
+                <span className="truncate text-slate-200 text-[11px]">
+                  {a.title}
+                </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-mono text-emerald-400 text-[11px] font-bold">

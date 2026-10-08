@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { stateManager } from '../state/state-manager.js';
 import { analyzeNatureImage } from '../ai/gemma-client.js';
 import { synthesizeSpeechWav } from '../ai/kokoro-tts.js';
 import { db } from '../db/index.js';
-import type { IngestionResult, AffinityType } from '../state/types.js';
+import { stateManager } from '../state/state-manager.js';
+import type { IngestionResult } from '../state/types.js';
 
 export const petRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /api/pet/state - Fetch live calculated pet state
@@ -27,7 +27,7 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
       mimeType = data.mimetype;
     } else {
       const body = request.body as any;
-      if (!body || !body.image) {
+      if (!body?.image) {
         return reply.status(400).send({ error: 'Missing image data' });
       }
       base64Image = body.image;
@@ -42,12 +42,12 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
       updatedState = stateManager.applyIngestion(
         evalResult.nutrition_value,
         evalResult.hydration_value,
-        evalResult.affinity
+        evalResult.affinity,
       );
     }
 
     // Persist ingestion history
-    const ingestionId = 'ing_' + Math.random().toString(36).substring(2, 10);
+    const ingestionId = `ing_${Math.random().toString(36).substring(2, 10)}`;
     const now = Date.now();
     db.prepare(`
       INSERT INTO ingestions (id, subject, affinity, nutrition_granted, hydration_granted, is_authentic, dialogue_log, created_at)
@@ -60,7 +60,7 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
       evalResult.hydration_value,
       evalResult.is_authentic_outdoor ? 1 : 0,
       evalResult.reaction_dialogue,
-      now
+      now,
     );
 
     // Synthesize spoken voice reaction
@@ -77,7 +77,7 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
       rejectionReason: evalResult.rejection_reason,
       reactionDialogue: evalResult.reaction_dialogue,
       petState: updatedState,
-      audioBase64
+      audioBase64,
     };
 
     return reply.send(response);
@@ -93,15 +93,22 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
     const { petState, vitalityRestored } = stateManager.applyWalkSession(
       durationSeconds,
       distanceMeters,
-      stepCount
+      stepCount,
     );
 
-    const sessionId = 'walk_' + Math.random().toString(36).substring(2, 10);
+    const sessionId = `walk_${Math.random().toString(36).substring(2, 10)}`;
     const now = Date.now();
     db.prepare(`
       INSERT INTO walk_sessions (id, duration_seconds, distance_meters, step_count, vitality_restored, completed_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(sessionId, durationSeconds, distanceMeters, stepCount, vitalityRestored, now);
+    `).run(
+      sessionId,
+      durationSeconds,
+      distanceMeters,
+      stepCount,
+      vitalityRestored,
+      now,
+    );
 
     const spokenNote = `Whew! What an invigorating walk! We explored for ${Math.round(durationSeconds / 60)} minutes and restored ${vitalityRestored}% of my vitality!`;
     const audioWav = await synthesizeSpeechWav(spokenNote);
@@ -112,7 +119,7 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
       vitalityRestored,
       petState,
       dialogue: spokenNote,
-      audioBase64
+      audioBase64,
     });
   });
 
@@ -123,10 +130,13 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
     const lng = Number(body?.longitude);
     const accuracy = Number(body?.accuracy) || 20;
 
-    if (!isNaN(lat) && !isNaN(lng)) {
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
       stateManager.updateLocation(lat, lng, accuracy);
     }
-    return reply.send({ success: true, location: stateManager.getLastLocation() });
+    return reply.send({
+      success: true,
+      location: stateManager.getLastLocation(),
+    });
   });
 
   // GET /api/pet/nature-map - Poll live nearby biodiversity observations and weather
@@ -137,23 +147,30 @@ export const petRoutes: FastifyPluginAsync = async (fastify) => {
     const lng = Number(query?.lng) || loc.lng;
     const category = (query?.category as any) || 'all';
 
-    const { fetchNearbyNatureObservations, fetchLiveBiomeWeather } = await import('../ai/biodiversity.js');
+    const { fetchNearbyNatureObservations, fetchLiveBiomeWeather } =
+      await import('../ai/biodiversity.js');
     const [observations, weather] = await Promise.all([
       fetchNearbyNatureObservations(lat, lng, category, 3),
-      fetchLiveBiomeWeather(lat, lng)
+      fetchLiveBiomeWeather(lat, lng),
     ]);
 
     return reply.send({
       userLocation: { lat, lng },
       weather,
-      observations
+      observations,
     });
   });
 
   // GET /api/pet/history - Get feeding and walk logs
   fastify.get('/history', async (_request, reply) => {
-    const ingestions = db.prepare('SELECT * FROM ingestions ORDER BY created_at DESC LIMIT 20').all();
-    const walks = db.prepare('SELECT * FROM walk_sessions ORDER BY completed_at DESC LIMIT 10').all();
+    const ingestions = db
+      .prepare('SELECT * FROM ingestions ORDER BY created_at DESC LIMIT 20')
+      .all();
+    const walks = db
+      .prepare(
+        'SELECT * FROM walk_sessions ORDER BY completed_at DESC LIMIT 10',
+      )
+      .all();
     return reply.send({ ingestions, walks });
   });
 };

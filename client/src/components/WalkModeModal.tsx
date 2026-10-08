@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Footprints, X, Play, Square, Compass, Sparkles, Volume2 } from 'lucide-react';
+import { Footprints, Play, Sparkles, Square, X } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { submitWalkSession } from '../lib/api';
 import { playBase64Wav, speakWebSpeech } from '../lib/audio';
 import type { WalkSessionResult } from '../lib/types';
@@ -11,7 +12,12 @@ interface WalkModeModalProps {
 }
 
 // Calculate distance in meters between two GPS coordinates using Haversine formula
-function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function calculateHaversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
   const R = 6371e3; // Earth radius in meters
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -28,14 +34,15 @@ function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lo
 export const WalkModeModal: React.FC<WalkModeModalProps> = ({
   isOpen,
   onClose,
-  onWalkComplete
+  onWalkComplete,
 }) => {
   const [isActive, setIsActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [distanceMeters, setDistanceMeters] = useState(0);
   const [stepCount, setStepCount] = useState(0);
   const [isFinishing, setIsFinishing] = useState(false);
-  const [completedResult, setCompletedResult] = useState<WalkSessionResult | null>(null);
+  const [completedResult, setCompletedResult] =
+    useState<WalkSessionResult | null>(null);
 
   const prevCoordRef = useRef<{ lat: number; lon: number } | null>(null);
   const geoWatchIdRef = useRef<number | null>(null);
@@ -44,33 +51,33 @@ export const WalkModeModal: React.FC<WalkModeModalProps> = ({
     let timer: ReturnType<typeof setInterval>;
     if (isActive) {
       timer = setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
+        setElapsedSeconds((prev) => prev + 1);
       }, 1000);
 
       // Start HTML5 Geolocation tracking
       if ('geolocation' in navigator) {
         geoWatchIdRef.current = navigator.geolocation.watchPosition(
-          pos => {
-            const { latitude, longitude, speed } = pos.coords;
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
             if (prevCoordRef.current) {
               const deltaDist = calculateHaversineDistance(
                 prevCoordRef.current.lat,
                 prevCoordRef.current.lon,
                 latitude,
-                longitude
+                longitude,
               );
 
               // Ignore GPS drift (< 1.5m) and vehicle speeds (> 6 m/s / ~22 km/h)
               if (deltaDist >= 1.5 && deltaDist < 80) {
-                setDistanceMeters(prev => Math.round(prev + deltaDist));
+                setDistanceMeters((prev) => Math.round(prev + deltaDist));
                 // Approximate 1 step every 0.75m
-                setStepCount(prev => Math.round(prev + deltaDist / 0.75));
+                setStepCount((prev) => Math.round(prev + deltaDist / 0.75));
               }
             }
             prevCoordRef.current = { lat: latitude, lon: longitude };
           },
-          err => console.warn('Geolocation error:', err),
-          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+          (err) => console.warn('Geolocation error:', err),
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
         );
       }
     } else {
@@ -102,7 +109,11 @@ export const WalkModeModal: React.FC<WalkModeModalProps> = ({
     setIsFinishing(true);
 
     try {
-      const result = await submitWalkSession(elapsedSeconds, distanceMeters, stepCount);
+      const result = await submitWalkSession(
+        elapsedSeconds,
+        distanceMeters,
+        stepCount,
+      );
       setCompletedResult(result);
       onWalkComplete(result);
 
@@ -138,31 +149,40 @@ export const WalkModeModal: React.FC<WalkModeModalProps> = ({
 
         <div className="flex items-center gap-2 mb-4">
           <Footprints className="w-6 h-6 text-amber-400" />
-          <h3 className="font-extrabold text-lg text-amber-300">Touch Grass Walk Mode</h3>
+          <h3 className="font-extrabold text-lg text-amber-300">
+            Touch Grass Walk Mode
+          </h3>
         </div>
 
         <p className="text-xs text-slate-300 mb-6">
-          Step away from your screen. Take your phone on an outdoor walk to restore Sporeling's Vitality and awaken dormant memory recall.
+          Step away from your screen. Take your phone on an outdoor walk to
+          restore Sporeling's Vitality and awaken dormant memory recall.
         </p>
 
         {/* Live Metrics Display */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Duration</span>
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+              Duration
+            </span>
             <span className="font-mono text-xl font-extrabold text-emerald-400">
               {formatTime(elapsedSeconds)}
             </span>
           </div>
 
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Distance</span>
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+              Distance
+            </span>
             <span className="font-mono text-xl font-extrabold text-cyan-400">
               {distanceMeters}m
             </span>
           </div>
 
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Steps</span>
+            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+              Steps
+            </span>
             <span className="font-mono text-xl font-extrabold text-amber-400">
               {stepCount}
             </span>
@@ -174,9 +194,13 @@ export const WalkModeModal: React.FC<WalkModeModalProps> = ({
           <div className="bg-emerald-950/40 border border-emerald-800/60 rounded-2xl p-3.5 mb-6 text-xs text-emerald-200 animate-float">
             <div className="flex items-center gap-2 font-bold mb-1">
               <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span>Walk Completed! +{completedResult.vitalityRestored}% Vitality</span>
+              <span>
+                Walk Completed! +{completedResult.vitalityRestored}% Vitality
+              </span>
             </div>
-            <p className="italic text-[11px] text-emerald-300/90">"{completedResult.dialogue}"</p>
+            <p className="italic text-[11px] text-emerald-300/90">
+              "{completedResult.dialogue}"
+            </p>
           </div>
         )}
 

@@ -1,57 +1,118 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { stateManager } from '../state/state-manager.js';
-import { generateCompanionResponse, routeIntent, type CompanionAction, type ChatTurn } from '../ai/gemma-client.js';
-import { synthesizeSpeechWav } from '../ai/kokoro-tts.js';
-import { toolRegistry } from '../tools/registry.js';
-import { db } from '../db/index.js';
-import { WALK_TYPES, type WalkType } from '../ai/geo.js';
 import { fetchLiveBiomeWeather } from '../ai/biodiversity.js';
-import { getSettings, updateSettings, decayAt, outdoorMinutesToday, PROFILE_PRESETS } from '../state/settings.js';
+import {
+  type ChatTurn,
+  type CompanionAction,
+  generateCompanionResponse,
+  routeIntent,
+} from '../ai/gemma-client.js';
+import { WALK_TYPES, type WalkType } from '../ai/geo.js';
+import { synthesizeSpeechWav } from '../ai/kokoro-tts.js';
 import { classify, getProviders } from '../ai/providers.js';
+import { db } from '../db/index.js';
+import {
+  decayAt,
+  getSettings,
+  outdoorMinutesToday,
+  PROFILE_PRESETS,
+  updateSettings,
+} from '../state/settings.js';
+import { stateManager } from '../state/state-manager.js';
+import { toolRegistry } from '../tools/registry.js';
 
 // ───────────────────────── conversation memory ─────────────────────────
 
 function recentTurns(n = 10): ChatTurn[] {
-  const rows = db.prepare('SELECT role, content FROM conversation ORDER BY id DESC LIMIT ?').all(n) as ChatTurn[];
+  const rows = db
+    .prepare('SELECT role, content FROM conversation ORDER BY id DESC LIMIT ?')
+    .all(n) as ChatTurn[];
   return rows.reverse();
 }
 
 function logTurn(role: 'user' | 'assistant', content: string, meta?: any) {
-  db.prepare('INSERT INTO conversation (role, content, meta, created_at) VALUES (?, ?, ?, ?)')
-    .run(role, content.slice(0, 2000), meta ? JSON.stringify(meta) : null, Date.now());
+  db.prepare(
+    'INSERT INTO conversation (role, content, meta, created_at) VALUES (?, ?, ?, ?)',
+  ).run(
+    role,
+    content.slice(0, 2000),
+    meta ? JSON.stringify(meta) : null,
+    Date.now(),
+  );
   // Keep the table small — this is a pocket pet, not an archive.
-  db.prepare('DELETE FROM conversation WHERE id NOT IN (SELECT id FROM conversation ORDER BY id DESC LIMIT 200)').run();
+  db.prepare(
+    'DELETE FROM conversation WHERE id NOT IN (SELECT id FROM conversation ORDER BY id DESC LIMIT 200)',
+  ).run();
 }
 
 /** Pending multi-turn dialogue (e.g. walk planner waiting for a type or duration). */
-let pendingWalk: { walk_type?: WalkType; duration_min?: number; expires: number } | null = null;
+let pendingWalk: {
+  walk_type?: WalkType;
+  duration_min?: number;
+  expires: number;
+} | null = null;
 
 // ───────────────────────── slot parsers ─────────────────────────
 
-const WEATHER_RE = /\b(weather|forecast|temperature|temp|raining|rain|sunny|snow|hot|cold|humid|foraging conditions|radar)\b/;
+const WEATHER_RE =
+  /\b(weather|forecast|temperature|temp|raining|rain|sunny|snow|hot|cold|humid|foraging conditions|radar)\b/;
 const WALK_RE = /\b(walk|route|stroll|hike|ramble|wander|loop|trail)\b/;
 
-const NOT_PLACES = new Set(['here', 'outside', 'the park', 'my area', 'my location', 'the morning', 'the afternoon', 'the evening', 'an hour', 'a bit', 'general']);
+const NOT_PLACES = new Set([
+  'here',
+  'outside',
+  'the park',
+  'my area',
+  'my location',
+  'the morning',
+  'the afternoon',
+  'the evening',
+  'an hour',
+  'a bit',
+  'general',
+]);
 
 function extractPlace(text: string): string | null {
-  const m = text.match(/\b(?:in|at|for|over|around|near)\s+([A-Za-z][A-Za-z .,'-]{1,60}?)(?:\s+(?:today|tomorrow|tonight|right now|now|this \w+)|[?.!]|$)/i);
+  const m = text.match(
+    /\b(?:in|at|for|over|around|near)\s+([A-Za-z][A-Za-z .,'-]{1,60}?)(?:\s+(?:today|tomorrow|tonight|right now|now|this \w+)|[?.!]|$)/i,
+  );
   if (!m) return null;
-  const place = m[1].trim().replace(/[,.]$/, '').replace(/^(?:(?:in|at|for|over|around|near|the)\s+)+/i, '');
-  if (NOT_PLACES.has(place.toLowerCase()) || /^(the )?(weather|moment|minute|while)$/i.test(place)) return null;
+  const place = m[1]
+    .trim()
+    .replace(/[,.]$/, '')
+    .replace(/^(?:(?:in|at|for|over|around|near|the)\s+)+/i, '');
+  if (
+    NOT_PLACES.has(place.toLowerCase()) ||
+    /^(the )?(weather|moment|minute|while)$/i.test(place)
+  )
+    return null;
   return place;
 }
 
 function parseWalkType(lower: string): WalkType | undefined {
-  if (/\b(wood|woods|woodland|forest|trees|foraging|forage|mushroom)/.test(lower)) return 'woods';
-  if (/\b(river|canal|lake|water|waterside|sea|coast|beach|pond|reservoir)/.test(lower)) return 'waterside';
-  if (/\b(country|countryside|fields?|hills?|meadow|rural|moor|heath)/.test(lower)) return 'country';
-  if (/\b(city|town|urban|streets?|landmark|historic)/.test(lower)) return 'city';
+  if (
+    /\b(wood|woods|woodland|forest|trees|foraging|forage|mushroom)/.test(lower)
+  )
+    return 'woods';
+  if (
+    /\b(river|canal|lake|water|waterside|sea|coast|beach|pond|reservoir)/.test(
+      lower,
+    )
+  )
+    return 'waterside';
+  if (
+    /\b(country|countryside|fields?|hills?|meadow|rural|moor|heath)/.test(lower)
+  )
+    return 'country';
+  if (/\b(city|town|urban|streets?|landmark|historic)/.test(lower))
+    return 'city';
   if (/\b(park|garden|green)/.test(lower)) return 'park';
   return undefined;
 }
 
 function parseDuration(lower: string): number | undefined {
-  const m = lower.match(/(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes)\b/);
+  const m = lower.match(
+    /(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes)\b/,
+  );
   if (m) return Math.round(Number(m[1]) * (m[2].startsWith('h') ? 60 : 1));
   if (/half an hour|half hour/.test(lower)) return 30;
   if (/an hour and a half|hour and a half/.test(lower)) return 90;
@@ -61,15 +122,23 @@ function parseDuration(lower: string): number | undefined {
   return undefined;
 }
 
-function walkOptionsWidget(weather?: { conditions?: string; rainChance?: number; sunset?: string }) {
+function walkOptionsWidget(weather?: {
+  conditions?: string;
+  rainChance?: number;
+  sunset?: string;
+}) {
   return {
     type: 'walk_options',
     data: {
-      types: (Object.keys(WALK_TYPES) as WalkType[]).map((k) => ({ id: k, ...WALK_TYPES[k], query: undefined })),
+      types: (Object.keys(WALK_TYPES) as WalkType[]).map((k) => ({
+        id: k,
+        ...WALK_TYPES[k],
+        query: undefined,
+      })),
       durations: [20, 30, 45, 60, 90],
       preferred: getSettings().preferredWalk,
-      weather
-    }
+      weather,
+    },
   };
 }
 
@@ -82,10 +151,16 @@ async function lifestyleContext(): Promise<string> {
     `Local time: ${now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} (${now.toLocaleDateString('en-GB', { weekday: 'long' })}).`,
     `User lifestyle: ${PROFILE_PRESETS[s.profile].label} — ${PROFILE_PRESETS[s.profile].blurb}`,
     `Outdoor time today: ${mins} of ${s.dailyGoalMinutes} goal minutes.`,
-    phase === 'work_nap' ? 'The user is in work hours; keep it brief and suggest a lunch walk.' : '',
-    phase === 'pressure' ? 'This is a good window to go outside (lunch break / after work). Encourage it!' : '',
-    s.preferredWalk ? `They usually enjoy ${s.preferredWalk} walks.` : ''
-  ].filter(Boolean).join('\n');
+    phase === 'work_nap'
+      ? 'The user is in work hours; keep it brief and suggest a lunch walk.'
+      : '',
+    phase === 'pressure'
+      ? 'This is a good window to go outside (lunch break / after work). Encourage it!'
+      : '',
+    s.preferredWalk ? `They usually enjoy ${s.preferredWalk} walks.` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ───────────────────────── route ─────────────────────────
@@ -115,18 +190,43 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
     // Slot hints from regex
     const walkType = parseWalkType(lower);
     const duration = parseDuration(lower);
-    const wantsWalk = (WALK_RE.test(lower) && /\b(plan|suggest|take|find|go|fancy|want|route|where|recommend|me a)\b/.test(lower))
-      || (pendingWalk !== null && (walkType !== undefined || duration !== undefined || /\b(surprise|any|you pick|whatever|dunno)\b/.test(lower)));
+    const wantsWalk =
+      (WALK_RE.test(lower) &&
+        /\b(plan|suggest|take|find|go|fancy|want|route|where|recommend|me a)\b/.test(
+          lower,
+        )) ||
+      (pendingWalk !== null &&
+        (walkType !== undefined ||
+          duration !== undefined ||
+          /\b(surprise|any|you pick|whatever|dunno)\b/.test(lower)));
 
     let intent: string | null = null;
     let location: string | null = null;
 
-    if (lower.startsWith('remember ') || lower.startsWith('save note ') || lower.startsWith('note:')) intent = 'save_memory';
-    else if (lower.startsWith('recall ') || lower.startsWith('what do you remember about') || lower.startsWith('search memories')) intent = 'recall_memory';
+    if (
+      lower.startsWith('remember ') ||
+      lower.startsWith('save note ') ||
+      lower.startsWith('note:')
+    )
+      intent = 'save_memory';
+    else if (
+      lower.startsWith('recall ') ||
+      lower.startsWith('what do you remember about') ||
+      lower.startsWith('search memories')
+    )
+      intent = 'recall_memory';
     else if (wantsWalk) intent = 'plan_walk';
-    else if (WEATHER_RE.test(lower)) { intent = 'weather'; location = extractPlace(text); }
-    else if (/\b(alarm|timer|remind me to walk)\b/.test(lower)) intent = 'alarm';
-    else if (/\b(mushroom|shroom|bird|tree|spore|fungi|nearby|nature map|scan)\b/.test(lower)) intent = 'scan_nature';
+    else if (WEATHER_RE.test(lower)) {
+      intent = 'weather';
+      location = extractPlace(text);
+    } else if (/\b(alarm|timer|remind me to walk)\b/.test(lower))
+      intent = 'alarm';
+    else if (
+      /\b(mushroom|shroom|bird|tree|spore|fungi|nearby|nature map|scan)\b/.test(
+        lower,
+      )
+    )
+      intent = 'scan_nature';
 
     // System-1 pass: if a Laya-style classifier is configured, it decides the intent in ~100ms
     // before we spend an LLM call. Location spans still come from regex / the LLM router.
@@ -136,14 +236,17 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
           type: 'choice',
           instructions: 'What does the user want from their nature companion?',
           criteria: {
-            weather: 'weather, temperature, rain, sunny, forecast, conditions somewhere',
-            plan_walk: 'plan a walk, route, stroll, hike, somewhere to go outside',
-            scan_nature: 'nearby mushrooms, birds, trees, plants, wildlife sightings',
+            weather:
+              'weather, temperature, rain, sunny, forecast, conditions somewhere',
+            plan_walk:
+              'plan a walk, route, stroll, hike, somewhere to go outside',
+            scan_nature:
+              'nearby mushrooms, birds, trees, plants, wildlife sightings',
             save_memory: 'remember this, note, save a reminder',
             recall_memory: 'what did I say, recall a note, search memories',
-            chat: 'small talk, feelings, questions about the companion, anything else'
-          }
-        }
+            chat: 'small talk, feelings, questions about the companion, anything else',
+          },
+        },
       });
       const a = c?.answers?.intent;
       if (a?.choice && a.choice !== 'chat' && (a.confidence ?? 1) >= 0.5) {
@@ -154,7 +257,12 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Ambiguous → let Gemma route (also catches "is it sunny in kyoto" style phrasing the regex misses)
     let routed: Awaited<ReturnType<typeof routeIntent>> = null;
-    if (!intent || (intent === 'weather' && !location && /\b[A-Z][a-z]{2,}/.test(text.replace(/^\w+/, '')))) {
+    if (
+      !intent ||
+      (intent === 'weather' &&
+        !location &&
+        /\b[A-Z][a-z]{2,}/.test(text.replace(/^\w+/, '')))
+    ) {
       routed = await routeIntent(text, history);
       if (routed && routed.intent !== 'chat') {
         intent = intent ?? routed.intent;
@@ -164,21 +272,35 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
 
     if (intent === 'save_memory') {
       const content = text.replace(/^(remember|save note|note:)\s*/i, '');
-      toolResult = await toolRegistry.save_memory.handler({ content }, petState);
+      toolResult = await toolRegistry.save_memory.handler(
+        { content },
+        petState,
+      );
       replyText = toolResult.message;
       action = toolResult.success ? 'confident' : 'depleted';
-      if (toolResult.success) widget = { type: 'memory_card', data: toolResult.data };
+      if (toolResult.success)
+        widget = { type: 'memory_card', data: toolResult.data };
     } else if (intent === 'recall_memory') {
-      const query = text.replace(/^(recall|what do you remember about|search memories)\s*/i, '');
+      const query = text.replace(
+        /^(recall|what do you remember about|search memories)\s*/i,
+        '',
+      );
       action = 'searching';
-      toolResult = await toolRegistry.recall_memory.handler({ query }, petState);
+      toolResult = await toolRegistry.recall_memory.handler(
+        { query },
+        petState,
+      );
       replyText = toolResult.message;
-      if (toolResult.success && toolResult.data) widget = { type: 'memory_list', data: toolResult.data };
+      if (toolResult.success && toolResult.data)
+        widget = { type: 'memory_list', data: toolResult.data };
     } else if (intent === 'weather') {
-      toolResult = await toolRegistry.check_outdoor_forecast.handler(location ? { location } : {}, petState);
+      toolResult = await toolRegistry.check_outdoor_forecast.handler(
+        location ? { location } : {},
+        petState,
+      );
       replyText = toolResult.message;
       if (toolResult.success && location) {
-        replyText += ' Shall I check what it\'s like outside your door too?';
+        replyText += " Shall I check what it's like outside your door too?";
       } else if (toolResult.success && toolResult.data?.weatherCode < 60) {
         replyText += ' Fancy a walk? Just say "plan me a walk".';
         quickReplies = ['Plan me a walk', 'Quick 20 minute stroll'];
@@ -186,20 +308,38 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
       action = toolResult.success ? 'confident' : 'surprised';
       widget = { type: 'weather_radar', data: toolResult.data };
     } else if (intent === 'plan_walk') {
-      const wt = walkType ?? (routed?.walk_type || undefined) ?? pendingWalk?.walk_type
-        ?? (/\b(surprise|any|you pick|whatever)\b/.test(lower) ? (getSettings().preferredWalk as WalkType) || 'park' : undefined);
-      const dur = duration ?? (routed?.duration_min || undefined) ?? pendingWalk?.duration_min;
+      const wt =
+        walkType ??
+        (routed?.walk_type || undefined) ??
+        pendingWalk?.walk_type ??
+        (/\b(surprise|any|you pick|whatever)\b/.test(lower)
+          ? (getSettings().preferredWalk as WalkType) || 'park'
+          : undefined);
+      const dur =
+        duration ??
+        (routed?.duration_min || undefined) ??
+        pendingWalk?.duration_min;
 
       if (!wt) {
-        pendingWalk = { duration_min: dur, expires: Date.now() + 10 * 60 * 1000 };
+        pendingWalk = {
+          duration_min: dur,
+          expires: Date.now() + 10 * 60 * 1000,
+        };
         const loc = stateManager.getLastLocation();
         const w = await fetchLiveBiomeWeather(loc.lat, loc.lng);
         const rainy = w.weatherCode >= 51;
-        replyText = `Ooh, an adventure! What kind of walk${dur ? ` for ${dur} minutes` : ''}? ` +
-          (rainy ? `It's ${w.conditions} out, so a city loop might keep you drier.` : `Woods are best for spotting fungi for me!`) +
+        replyText =
+          `Ooh, an adventure! What kind of walk${dur ? ` for ${dur} minutes` : ''}? ` +
+          (rainy
+            ? `It's ${w.conditions} out, so a city loop might keep you drier.`
+            : `Woods are best for spotting fungi for me!`) +
           (w.sunset ? ` Sunset's at ${w.sunset}.` : '');
         action = 'surprised';
-        widget = walkOptionsWidget({ conditions: w.conditions, rainChance: w.rainChance, sunset: w.sunset });
+        widget = walkOptionsWidget({
+          conditions: w.conditions,
+          rainChance: w.rainChance,
+          sunset: w.sunset,
+        });
       } else if (!dur) {
         pendingWalk = { walk_type: wt, expires: Date.now() + 10 * 60 * 1000 };
         replyText = `A ${WALK_TYPES[wt].label.toLowerCase()}, lovely! How long have you got?`;
@@ -209,14 +349,20 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
         pendingWalk = null;
         action = 'searching';
         updateSettings({ preferredWalk: wt });
-        toolResult = await toolRegistry.plan_walk.handler({ walk_type: wt, duration_min: dur }, petState);
+        toolResult = await toolRegistry.plan_walk.handler(
+          { walk_type: wt, duration_min: dur },
+          petState,
+        );
         replyText = toolResult.message;
         action = toolResult.success ? 'celebrating' : 'thinking';
         widget = { type: 'walk_route', data: toolResult.data };
-        quickReplies = toolResult.success ? ['Something shorter', 'Try somewhere else'] : ['Try a park walk', 'Try a city walk'];
+        quickReplies = toolResult.success
+          ? ['Something shorter', 'Try somewhere else']
+          : ['Try a park walk', 'Try a city walk'];
       }
     } else if (intent === 'alarm') {
-      replyText = "Setting an outdoor nature reminder! Keep an eye on your background alarms.";
+      replyText =
+        'Setting an outdoor nature reminder! Keep an eye on your background alarms.';
       action = 'confident';
       widget = { type: 'alarm' };
     } else if (intent === 'scan_nature') {
@@ -226,17 +372,32 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
       else if (/tree|flora|plant/.test(lower)) category = 'plants';
 
       action = 'searching';
-      toolResult = await toolRegistry.scan_nearby_nature.handler({ category }, petState);
+      toolResult = await toolRegistry.scan_nearby_nature.handler(
+        { category },
+        petState,
+      );
       replyText = toolResult.message;
-      widget = { type: 'biome_radar', data: { observations: toolResult.data, category } };
+      widget = {
+        type: 'biome_radar',
+        data: { observations: toolResult.data, category },
+      };
     } else {
-      const aiReply = await generateCompanionResponse(text, petState, history, await lifestyleContext());
+      const aiReply = await generateCompanionResponse(
+        text,
+        petState,
+        history,
+        await lifestyleContext(),
+      );
       replyText = aiReply.replyText;
       action = aiReply.action;
     }
 
     logTurn('user', text);
-    logTurn('assistant', replyText, widget ? { widget: widget.type } : undefined);
+    logTurn(
+      'assistant',
+      replyText,
+      widget ? { widget: widget.type } : undefined,
+    );
 
     const audioWav = await synthesizeSpeechWav(replyText);
     const audioBase64 = audioWav ? audioWav.toString('base64') : null;
@@ -248,16 +409,20 @@ export const companionRoutes: FastifyPluginAsync = async (fastify) => {
       quickReplies,
       toolResult,
       audioBase64,
-      petState: stateManager.getCalculatedState()
+      petState: stateManager.getCalculatedState(),
     });
   });
 
   // GET /api/companion/history - recent conversation turns
-  fastify.get('/history', async (_request, reply) => reply.send({ turns: recentTurns(30) }));
+  fastify.get('/history', async (_request, reply) =>
+    reply.send({ turns: recentTurns(30) }),
+  );
 
   // GET /api/companion/memories - List saved memories
   fastify.get('/memories', async (_request, reply) => {
-    const memories = db.prepare('SELECT * FROM memories ORDER BY created_at DESC LIMIT 50').all();
+    const memories = db
+      .prepare('SELECT * FROM memories ORDER BY created_at DESC LIMIT 50')
+      .all();
     return reply.send({ memories });
   });
 

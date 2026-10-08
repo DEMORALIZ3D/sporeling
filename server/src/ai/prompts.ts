@@ -38,7 +38,13 @@ Respond strictly in valid JSON format with this exact schema:
 }
 `;
 
-export function buildCompanionSystemPrompt(petState: { hunger: number; hydration: number; vitality: number; mood: string; name: string }): string {
+export function buildCompanionSystemPrompt(petState: {
+  hunger: number;
+  hydration: number;
+  vitality: number;
+  mood: string;
+  name: string;
+}): string {
   return `You are ${petState.name}, a whimsical, living bio-familiar companion whose life is rooted in the outdoors.
 Your current physical state:
 - Hunger: ${petState.hunger}%

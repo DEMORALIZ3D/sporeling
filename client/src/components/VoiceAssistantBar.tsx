@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
 import { Mic, MicOff, Send, Sparkles, X } from 'lucide-react';
-import { createSpeechRecognizer, playBase64Wav, speakWebSpeech } from '../lib/audio';
+import type React from 'react';
+import { useState } from 'react';
 import { sendCompanionVoiceText } from '../lib/api';
-import type { PetState, CreatureAction } from '../lib/types';
-import { WeatherForagingRadarWidget } from './Widgets/WeatherForagingRadarWidget';
-import { TouchGrassAlarmWidget } from './Widgets/TouchGrassAlarmWidget';
+import {
+  createSpeechRecognizer,
+  playBase64Wav,
+  speakWebSpeech,
+} from '../lib/audio';
+import type { CreatureAction, PetState } from '../lib/types';
 import { BiomeRadarWidget } from './Widgets/BiomeRadarWidget';
-import { WalkRouteWidget, WalkOptionsWidget } from './Widgets/WalkRouteWidget';
+import { TouchGrassAlarmWidget } from './Widgets/TouchGrassAlarmWidget';
+import { WalkOptionsWidget, WalkRouteWidget } from './Widgets/WalkRouteWidget';
+import { WeatherForagingRadarWidget } from './Widgets/WeatherForagingRadarWidget';
 
 interface VoiceAssistantBarProps {
   petState: PetState | null;
@@ -21,12 +26,15 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
   onSpeakingStateChange,
   onStateUpdate,
   onActionTrigger,
-  onStartWalk
+  onStartWalk,
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [inputText, setInputText] = useState('');
   const [replyText, setReplyText] = useState<string | null>(null);
-  const [activeWidget, setActiveWidget] = useState<{ type: string; data?: any } | null>(null);
+  const [activeWidget, setActiveWidget] = useState<{
+    type: string;
+    data?: any;
+  } | null>(null);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -75,25 +83,27 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
     } else {
       setIsListening(true);
       const recognizer = createSpeechRecognizer(
-        transcript => {
+        (transcript) => {
           setIsListening(false);
           if (transcript) {
             handleSendMessage(transcript);
           }
         },
-        err => {
+        (err) => {
           console.warn('Speech recognition error:', err);
           setIsListening(false);
         },
         () => {
           setIsListening(false);
-        }
+        },
       );
 
       if (recognizer.isSupported) {
         recognizer.start();
       } else {
-        alert('Web Speech API is not supported in this browser. You can type in the box below.');
+        alert(
+          'Web Speech API is not supported in this browser. You can type in the box below.',
+        );
         setIsListening(false);
       }
     }
@@ -111,7 +121,9 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
           >
             <X className="w-3.5 h-3.5" />
           </button>
-          {activeWidget.type === 'weather_radar' && <WeatherForagingRadarWidget data={activeWidget.data} />}
+          {activeWidget.type === 'weather_radar' && (
+            <WeatherForagingRadarWidget data={activeWidget.data} />
+          )}
           {activeWidget.type === 'alarm' && <TouchGrassAlarmWidget />}
           {activeWidget.type === 'biome_radar' && (
             <BiomeRadarWidget
@@ -120,7 +132,10 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
             />
           )}
           {activeWidget.type === 'walk_options' && (
-            <WalkOptionsWidget data={activeWidget.data} onPick={(t) => handleSendMessage(t)} />
+            <WalkOptionsWidget
+              data={activeWidget.data}
+              onPick={(t) => handleSendMessage(t)}
+            />
           )}
           {activeWidget.type === 'walk_route' && activeWidget.data && (
             <WalkRouteWidget plan={activeWidget.data} onStart={onStartWalk} />
@@ -134,7 +149,11 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
           {quickReplies.map((q) => (
             <button
               key={q}
-              onClick={() => (q === 'Start walk' && onStartWalk ? onStartWalk() : handleSendMessage(q))}
+              onClick={() =>
+                q === 'Start walk' && onStartWalk
+                  ? onStartWalk()
+                  : handleSendMessage(q)
+              }
               className="px-3 py-1.5 rounded-full bg-slate-900/80 border border-emerald-800/70 text-emerald-200 text-xs font-semibold backdrop-blur-md hover:bg-emerald-900/60 active:scale-95 transition"
             >
               {q}
@@ -172,15 +191,23 @@ export const VoiceAssistantBar: React.FC<VoiceAssistantBarProps> = ({
           }`}
           title={isListening ? 'Listening...' : 'Tap to speak'}
         >
-          {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {isListening ? (
+            <MicOff className="w-5 h-5" />
+          ) : (
+            <Mic className="w-5 h-5" />
+          )}
         </button>
 
         <input
           type="text"
           value={inputText}
-          onChange={e => setInputText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSendMessage(inputText)}
-          placeholder={isListening ? 'Listening to your voice...' : 'Talk to Sporeling (e.g. "foraging weather")...'}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
+          placeholder={
+            isListening
+              ? 'Listening to your voice...'
+              : 'Talk to Sporeling (e.g. "foraging weather")...'
+          }
           className="flex-1 bg-transparent text-xs text-slate-100 placeholder:text-slate-500 outline-none px-2 font-medium"
         />
 

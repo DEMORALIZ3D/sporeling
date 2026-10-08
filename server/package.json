@@ -18,8 +18,7 @@
     "fastify": "^5.2.1",
     "kokoro-js": "^1.2.1",
     "satellite.js": "^7.1.0",
-    "sharp": "^0.35.5",
-    "sporeling": "file:.."
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

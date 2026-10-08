@@ -1,6 +1,20 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, SwitchCamera, MapPin, Sparkles, AlertCircle, Send } from 'lucide-react';
-import { startCaptureSession, submitCapture, fetchAchievements, type CaptureResult, type AchievementStatus } from '../lib/captureApi';
+import {
+  AlertCircle,
+  MapPin,
+  Send,
+  Sparkles,
+  SwitchCamera,
+  X,
+} from 'lucide-react';
+import type React from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type AchievementStatus,
+  type CaptureResult,
+  fetchAchievements,
+  startCaptureSession,
+  submitCapture,
+} from '../lib/captureApi';
 import { captureHub, type PendingJob } from '../lib/captureHub';
 import { notificationManager } from '../lib/notifications';
 import { CaptureResultCard } from './CaptureResultCard';
@@ -10,11 +24,19 @@ interface FieldCameraProps {
   onClose: () => void;
 }
 
-interface ZoomCaps { min: number; max: number; step: number; hardware: boolean }
+interface ZoomCaps {
+  min: number;
+  max: number;
+  step: number;
+  hardware: boolean;
+}
 
 const DIGITAL_MAX = 5;
 
-export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => {
+export const FieldCamera: React.FC<FieldCameraProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const nonceRef = useRef<string | null>(null);
@@ -25,7 +47,12 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceIdx, setDeviceIdx] = useState(0);
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
-  const [zoomCaps, setZoomCaps] = useState<ZoomCaps>({ min: 1, max: DIGITAL_MAX, step: 0.1, hardware: false });
+  const [zoomCaps, setZoomCaps] = useState<ZoomCaps>({
+    min: 1,
+    max: DIGITAL_MAX,
+    step: 0.1,
+    hardware: false,
+  });
   const [zoom, setZoom] = useState(1);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(false);
@@ -40,66 +67,103 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
     if (!isOpen) return;
     return captureHub.subscribe({
       onProgress: setPending,
-      onResult: (r) => { setResult(r); setAchievements(r.achievements); },
-      onFailed: (_id, err) => setError(err)
+      onResult: (r) => {
+        setResult(r);
+        setAchievements(r.achievements);
+      },
+      onFailed: (_id, err) => setError(err),
     });
   }, [isOpen]);
 
-  const stopStream = () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => {
+      t.stop();
+    });
     streamRef.current = null;
-  };
+  }, []);
 
-  const startStream = useCallback(async (deviceId?: string) => {
-    stopStream();
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: facing } }),
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+  const startStream = useCallback(
+    async (deviceId?: string) => {
+      stopStream();
+      setError(null);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            ...(deviceId
+              ? { deviceId: { exact: deviceId } }
+              : { facingMode: { ideal: facing } }),
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+
+        const track = stream.getVideoTracks()[0];
+        const caps = (track.getCapabilities?.() ??
+          {}) as MediaTrackCapabilities & {
+          zoom?: { min: number; max: number; step: number };
+        };
+        if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+          setZoomCaps({
+            min: caps.zoom.min,
+            max: caps.zoom.max,
+            step: caps.zoom.step || 0.1,
+            hardware: true,
+          });
+          setZoom(Math.max(caps.zoom.min, 1));
+        } else {
+          setZoomCaps({ min: 1, max: DIGITAL_MAX, step: 0.1, hardware: false });
+          setZoom(1);
         }
-      });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+        const settings = track.getSettings();
+        if (
+          settings.facingMode === 'user' ||
+          settings.facingMode === 'environment'
+        )
+          setFacing(settings.facingMode);
 
-      const track = stream.getVideoTracks()[0];
-      const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { zoom?: { min: number; max: number; step: number } };
-      if (caps.zoom && caps.zoom.max > caps.zoom.min) {
-        setZoomCaps({ min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1, hardware: true });
-        setZoom(Math.max(caps.zoom.min, 1));
-      } else {
-        setZoomCaps({ min: 1, max: DIGITAL_MAX, step: 0.1, hardware: false });
-        setZoom(1);
+        // labels are only populated after permission is granted
+        const all = (await navigator.mediaDevices.enumerateDevices()).filter(
+          (d) => d.kind === 'videoinput',
+        );
+        setDevices(all);
+        const idx = all.findIndex((d) => d.deviceId === settings.deviceId);
+        if (idx >= 0) setDeviceIdx(idx);
+      } catch (e: any) {
+        setError(
+          e?.name === 'NotAllowedError'
+            ? 'Camera permission denied.'
+            : 'Camera unavailable on this device.',
+        );
       }
-      const settings = track.getSettings();
-      if (settings.facingMode === 'user' || settings.facingMode === 'environment') setFacing(settings.facingMode);
-
-      // labels are only populated after permission is granted
-      const all = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
-      setDevices(all);
-      const idx = all.findIndex((d) => d.deviceId === settings.deviceId);
-      if (idx >= 0) setDeviceIdx(idx);
-    } catch (e: any) {
-      setError(e?.name === 'NotAllowedError' ? 'Camera permission denied.' : 'Camera unavailable on this device.');
-    }
-  }, [facing]);
+    },
+    [facing, stopStream],
+  );
 
   // open / close lifecycle
   useEffect(() => {
-    if (!isOpen) { stopStream(); setResult(null); return; }
+    if (!isOpen) {
+      stopStream();
+      setResult(null);
+      return;
+    }
     let watchId: number | null = null;
-    startCaptureSession().then((s) => (nonceRef.current = s.nonce)).catch(() => setError('Backend offline — cannot start capture session.'));
+    startCaptureSession()
+      .then((s) => (nonceRef.current = s.nonce))
+      .catch(() => setError('Backend offline — cannot start capture session.'));
     fetchAchievements().then((a) => setAchievements(a.achievements));
     startStream();
     notificationManager.requestPermission().catch(() => {});
     if ('geolocation' in navigator) {
       watchId = navigator.geolocation.watchPosition(
-        (p) => { geoRef.current = p; setHasFix(true); },
+        (p) => {
+          geoRef.current = p;
+          setHasFix(true);
+        },
         () => setHasFix(false),
-        { enableHighAccuracy: true, maximumAge: 5000 }
+        { enableHighAccuracy: true, maximumAge: 5000 },
       );
     }
     return () => {
@@ -107,7 +171,7 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, startStream, stopStream]);
 
   // apply zoom
   useEffect(() => {
@@ -128,7 +192,8 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
     }
   };
 
-  const clampZoom = (z: number) => Math.min(zoomCaps.max, Math.max(zoomCaps.min, z));
+  const clampZoom = (z: number) =>
+    Math.min(zoomCaps.max, Math.max(zoomCaps.min, z));
 
   // pinch-to-zoom
   const onPointerDown = (e: React.PointerEvent) => {
@@ -151,12 +216,16 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) pinchRef.current = null;
   };
-  const onWheel = (e: React.WheelEvent) => setZoom((z) => clampZoom(z * (e.deltaY < 0 ? 1.08 : 0.926)));
+  const onWheel = (e: React.WheelEvent) =>
+    setZoom((z) => clampZoom(z * (e.deltaY < 0 ? 1.08 : 0.926)));
 
   const capture = async () => {
     const video = videoRef.current;
-    if (!video || !video.videoWidth || busy) return;
-    if (!nonceRef.current) { setError('Capture session not ready yet.'); return; }
+    if (!video?.videoWidth || busy) return;
+    if (!nonceRef.current) {
+      setError('Capture session not ready yet.');
+      return;
+    }
 
     setFlash(true);
     setTimeout(() => setFlash(false), 140);
@@ -164,23 +233,41 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
 
     // crop for digital zoom so the server sees what the user framed
     const digital = zoomCaps.hardware ? 1 : zoom;
-    const sw = video.videoWidth / digital, sh = video.videoHeight / digital;
-    const sx = (video.videoWidth - sw) / 2, sy = (video.videoHeight - sh) / 2;
+    const sw = video.videoWidth / digital,
+      sh = video.videoHeight / digital;
+    const sx = (video.videoWidth - sw) / 2,
+      sy = (video.videoHeight - sh) / 2;
     const scale = Math.min(1, 2048 / Math.max(sw, sh));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(sw * scale);
     canvas.height = Math.round(sh * scale);
     const ctx = canvas.getContext('2d')!;
-    if (facing === 'user') { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+    if (facing === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    const blob: Blob = await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej()), 'image/jpeg', 0.92));
+    const blob: Blob = await new Promise((res, rej) =>
+      canvas.toBlob((b) => (b ? res(b) : rej()), 'image/jpeg', 0.92),
+    );
 
     const geo = geoRef.current;
     const thumb = (() => {
       const t = document.createElement('canvas');
-      t.width = 96; t.height = 96;
+      t.width = 96;
+      t.height = 96;
       const s = Math.min(canvas.width, canvas.height);
-      t.getContext('2d')!.drawImage(canvas, (canvas.width - s) / 2, (canvas.height - s) / 2, s, s, 0, 0, 96, 96);
+      t.getContext('2d')?.drawImage(
+        canvas,
+        (canvas.width - s) / 2,
+        (canvas.height - s) / 2,
+        s,
+        s,
+        0,
+        0,
+        96,
+        96,
+      );
       return t.toDataURL('image/jpeg', 0.7);
     })();
     setBusy(true);
@@ -196,7 +283,7 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
         heading: geo?.coords.heading,
         cameraLabel: devices[deviceIdx]?.label || facing,
         facingMode: facing,
-        zoom
+        zoom,
       });
       captureHub.track(jobId, thumb);
       setSentFlash(true);
@@ -214,12 +301,17 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
   const plants = achievements.find((a) => a.id === 'sprout_keeper');
   const stars = achievements.find((a) => a.id === 'stargazer');
   const presets = [zoomCaps.min < 1 ? zoomCaps.min : null, 1, 2, 5].filter(
-    (z): z is number => z !== null && z >= zoomCaps.min && z <= zoomCaps.max
+    (z): z is number => z !== null && z >= zoomCaps.min && z <= zoomCaps.max,
   );
-  const camLabel = devices[deviceIdx]?.label?.replace(/\(.*?\)/g, '').trim() || (facing === 'user' ? 'Front camera' : 'Rear camera');
+  const camLabel =
+    devices[deviceIdx]?.label?.replace(/\(.*?\)/g, '').trim() ||
+    (facing === 'user' ? 'Front camera' : 'Rear camera');
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col select-none" style={{ touchAction: 'none' }}>
+    <div
+      className="fixed inset-0 z-50 bg-black flex flex-col select-none"
+      style={{ touchAction: 'none' }}
+    >
       {/* Viewfinder */}
       <div
         className="absolute inset-0 overflow-hidden"
@@ -235,26 +327,51 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
           playsInline
           muted
           className="w-full h-full object-cover transition-transform duration-75"
-          style={{ transform: `${facing === 'user' ? 'scaleX(-1) ' : ''}scale(${zoomCaps.hardware ? 1 : zoom})` }}
+          style={{
+            transform: `${facing === 'user' ? 'scaleX(-1) ' : ''}scale(${zoomCaps.hardware ? 1 : zoom})`,
+          }}
         />
         {/* rule-of-thirds grid */}
         <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
-          {Array.from({ length: 9 }).map((_, i) => <div key={i} className="border border-white/10" />)}
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="border border-white/10" />
+          ))}
         </div>
-        <div className={`absolute inset-0 bg-white pointer-events-none transition-opacity duration-150 ${flash ? 'opacity-80' : 'opacity-0'}`} />
+        <div
+          className={`absolute inset-0 bg-white pointer-events-none transition-opacity duration-150 ${flash ? 'opacity-80' : 'opacity-0'}`}
+        />
       </div>
 
       {/* Top bar */}
       <div className="relative z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/70 to-transparent">
-        <button onClick={onClose} aria-label="Close camera" className="p-2.5 rounded-full bg-black/50 backdrop-blur text-white active:scale-90 transition-transform">
+        <button
+          onClick={onClose}
+          aria-label="Close camera"
+          className="p-2.5 rounded-full bg-black/50 backdrop-blur text-white active:scale-90 transition-transform"
+        >
           <X className="w-5 h-5" />
         </button>
         <div className="flex gap-2 text-[11px] font-mono">
-          {fungi && <span className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-rose-200">🍄 {fungi.progress}/{fungi.goal}</span>}
-          {plants && <span className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-emerald-200">🌱 {plants.progress}/{plants.goal}</span>}
-          {stars && <span className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-indigo-200">⭐ {stars.progress}/{stars.goal}</span>}
-          <span className={`px-2.5 py-1 rounded-full bg-black/50 backdrop-blur flex items-center gap-1 ${hasFix ? 'text-emerald-300' : 'text-amber-300'}`}>
-            <MapPin className="w-3 h-3" />{hasFix ? 'GPS' : 'No GPS'}
+          {fungi && (
+            <span className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-rose-200">
+              🍄 {fungi.progress}/{fungi.goal}
+            </span>
+          )}
+          {plants && (
+            <span className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-emerald-200">
+              🌱 {plants.progress}/{plants.goal}
+            </span>
+          )}
+          {stars && (
+            <span className="px-2.5 py-1 rounded-full bg-black/50 backdrop-blur text-indigo-200">
+              ⭐ {stars.progress}/{stars.goal}
+            </span>
+          )}
+          <span
+            className={`px-2.5 py-1 rounded-full bg-black/50 backdrop-blur flex items-center gap-1 ${hasFix ? 'text-emerald-300' : 'text-amber-300'}`}
+          >
+            <MapPin className="w-3 h-3" />
+            {hasFix ? 'GPS' : 'No GPS'}
           </span>
         </div>
       </div>
@@ -266,13 +383,26 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
         <div className="relative z-10 mx-3 mb-2 flex items-center gap-2 overflow-x-auto">
           {sentFlash && (
             <span className="flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/90 text-black text-xs font-semibold">
-              <Send className="w-3.5 h-3.5" /> Sent! Keep exploring — I'll call you back.
+              <Send className="w-3.5 h-3.5" /> Sent! Keep exploring — I'll call
+              you back.
             </span>
           )}
           {pending.map((j) => (
-            <span key={j.jobId} className="flex-none flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-black/60 backdrop-blur text-[11px] text-slate-200">
-              {j.thumb ? <img src={j.thumb} alt="" className="w-7 h-7 rounded-full object-cover" /> : <Sparkles className="w-4 h-4 animate-spin text-emerald-300" />}
-              <Sparkles className="w-3 h-3 animate-spin text-emerald-300" />{j.stage}…
+            <span
+              key={j.jobId}
+              className="flex-none flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-black/60 backdrop-blur text-[11px] text-slate-200"
+            >
+              {j.thumb ? (
+                <img
+                  src={j.thumb}
+                  alt=""
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <Sparkles className="w-4 h-4 animate-spin text-emerald-300" />
+              )}
+              <Sparkles className="w-3 h-3 animate-spin text-emerald-300" />
+              {j.stage}…
             </span>
           ))}
         </div>
@@ -281,8 +411,15 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
       {/* Latest result / errors */}
       {error && (
         <div className="relative z-10 mx-3 mb-2 rounded-2xl bg-rose-950/90 border border-rose-800/60 p-3 text-xs text-rose-200 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />{error}
-          <button onClick={() => setError(null)} className="ml-auto" aria-label="Dismiss"><X className="w-4 h-4" /></button>
+          <AlertCircle className="w-4 h-4" />
+          {error}
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto"
+            aria-label="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
       {result && (
@@ -299,7 +436,9 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
               key={p}
               onClick={() => setZoom(p)}
               className={`min-w-9 h-9 px-2 rounded-full text-xs font-semibold transition-all active:scale-90 ${
-                Math.abs(zoom - p) < 0.05 ? 'bg-white/90 text-black' : 'text-white/80'
+                Math.abs(zoom - p) < 0.05
+                  ? 'bg-white/90 text-black'
+                  : 'text-white/80'
               }`}
             >
               {Math.abs(zoom - p) < 0.05 ? `${p}×` : p}
@@ -316,13 +455,22 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
           className="w-56 accent-emerald-400"
           aria-label="Zoom"
         />
-        <span className="text-[10px] font-mono text-white/60">{zoom.toFixed(1)}× {zoomCaps.hardware ? 'optical' : 'digital'} · {camLabel}</span>
+        <span className="text-[10px] font-mono text-white/60">
+          {zoom.toFixed(1)}× {zoomCaps.hardware ? 'optical' : 'digital'} ·{' '}
+          {camLabel}
+        </span>
       </div>
 
       {/* Shutter row */}
       <div className="relative z-10 flex items-center justify-around pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-black/80 to-transparent">
         <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/10 border border-white/20">
-          {result && <img src={result.capture.thumbUrl} alt="" className="w-full h-full object-cover" />}
+          {result && (
+            <img
+              src={result.capture.thumbUrl}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
         <button
           onClick={capture}
@@ -330,7 +478,9 @@ export const FieldCamera: React.FC<FieldCameraProps> = ({ isOpen, onClose }) => 
           aria-label="Take photo"
           className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
         >
-          <span className={`w-16 h-16 rounded-full ${busy ? 'bg-emerald-400 animate-pulse' : 'bg-white'}`} />
+          <span
+            className={`w-16 h-16 rounded-full ${busy ? 'bg-emerald-400 animate-pulse' : 'bg-white'}`}
+          />
         </button>
         <button
           onClick={switchCamera}

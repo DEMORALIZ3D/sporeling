@@ -1,25 +1,28 @@
-import React, { useState } from 'react';
-import type { PetState } from '../lib/types';
-import type { CreatureAction, AvatarStyle } from '../avatar/SporelingThreeCanvas';
-import { TouchGrassAlarmWidget } from './Widgets/TouchGrassAlarmWidget';
-import { WeatherForagingRadarWidget } from './Widgets/WeatherForagingRadarWidget';
-import { BiomeRadarWidget } from './Widgets/BiomeRadarWidget';
-import { 
-  Sparkles, 
-  Volume2, 
-  VolumeX, 
-  Clock, 
-  BookOpen, 
-  Camera, 
-  Footprints, 
+import {
+  Award,
+  BookOpen,
+  Camera,
+  CircleDot,
+  Footprints,
+  HelpCircle,
   Send,
   Smile,
-  HelpCircle,
-  Award,
+  Sparkles,
+  Volume2,
+  VolumeX,
   Zap,
-  CircleDot
 } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
+import type {
+  AvatarStyle,
+  CreatureAction,
+} from '../avatar/SporelingThreeCanvas';
 import { sendCompanionVoiceText } from '../lib/api';
+import type { PetState } from '../lib/types';
+import { BiomeRadarWidget } from './Widgets/BiomeRadarWidget';
+import { TouchGrassAlarmWidget } from './Widgets/TouchGrassAlarmWidget';
+import { WeatherForagingRadarWidget } from './Widgets/WeatherForagingRadarWidget';
 
 interface DesktopSidebarProps {
   petState: PetState | null;
@@ -42,13 +45,17 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   onOpenFeed,
   onOpenWalk,
   onOpenMemories,
-  onStateUpdate
+  onStateUpdate,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'alarms' | 'radar'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'alarms' | 'radar'>(
+    'overview',
+  );
   const [quickNote, setQuickNote] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
-  const [ambientAudioNode, setAmbientAudioNode] = useState<AudioContext | null>(null);
+  const [ambientAudioNode, setAmbientAudioNode] = useState<AudioContext | null>(
+    null,
+  );
 
   const handleQuickNote = async () => {
     if (!quickNote.trim() || isSubmittingNote) return;
@@ -75,7 +82,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
       setIsAmbientPlaying(false);
     } else {
       try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const ctx = new (
+          window.AudioContext || (window as any).webkitAudioContext
+        )();
         const bufferSize = ctx.sampleRate * 2;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -117,8 +126,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
               <Sparkles className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h2 className="font-extrabold text-sm text-slate-100">Sporeling Studio</h2>
-              <span className="text-[11px] font-mono text-emerald-400">Desktop Companion</span>
+              <h2 className="font-extrabold text-sm text-slate-100">
+                Sporeling Studio
+              </h2>
+              <span className="text-[11px] font-mono text-emerald-400">
+                Desktop Companion
+              </span>
             </div>
           </div>
 
@@ -130,9 +143,17 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                 ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
                 : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
             }`}
-            title={isAmbientPlaying ? 'Mute Forest Ambience' : 'Play Ambient Forest Wind'}
+            title={
+              isAmbientPlaying
+                ? 'Mute Forest Ambience'
+                : 'Play Ambient Forest Wind'
+            }
           >
-            {isAmbientPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {isAmbientPlaying ? (
+              <Volume2 className="w-4 h-4" />
+            ) : (
+              <VolumeX className="w-4 h-4" />
+            )}
           </button>
         </div>
 
@@ -172,7 +193,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           <button
             onClick={() => setActiveTab('overview')}
             className={`flex-1 py-1.5 rounded-lg transition-colors ${
-              activeTab === 'overview' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+              activeTab === 'overview'
+                ? 'bg-emerald-500 text-slate-950'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Express
@@ -180,7 +203,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           <button
             onClick={() => setActiveTab('alarms')}
             className={`flex-1 py-1.5 rounded-lg transition-colors ${
-              activeTab === 'alarms' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+              activeTab === 'alarms'
+                ? 'bg-emerald-500 text-slate-950'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Alarms
@@ -188,7 +213,9 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           <button
             onClick={() => setActiveTab('radar')}
             className={`flex-1 py-1.5 rounded-lg transition-colors ${
-              activeTab === 'radar' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-white'
+              activeTab === 'radar'
+                ? 'bg-emerald-500 text-slate-950'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Radar
@@ -272,8 +299,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
                 <input
                   type="text"
                   value={quickNote}
-                  onChange={e => setQuickNote(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleQuickNote()}
+                  onChange={(e) => setQuickNote(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleQuickNote()}
                   placeholder="Note a quick thought or idea..."
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-emerald-500"
                 />
